@@ -1,9 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+'use client';
+
 import { CheckCircle, Heart, Link, PlayCircleIcon } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Swal from 'sweetalert2';
 
 import {
@@ -60,6 +63,9 @@ export default function VideoCard({
   const [favorited, setFavorited] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [posterSrc, setPosterSrc] = useState('');
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(
+    null
+  );
 
   const isAggregate = from === 'search' && !!items?.length;
 
@@ -148,53 +154,91 @@ export default function VideoCard({
     return unsubscribe;
   }, [from, actualSource, actualId]);
 
+  const getPlayHref = useCallback(() => {
+    if (from === 'douban') {
+      return `/play?title=${encodeURIComponent(actualTitle.trim())}${
+        actualYear ? `&year=${actualYear}` : ''
+      }${actualSearchType ? `&stype=${actualSearchType}` : ''}`;
+    }
+    if (actualSource && actualId) {
+      return `/play?source=${actualSource}&id=${actualId}&title=${encodeURIComponent(
+        actualTitle
+      )}${actualYear ? `&year=${actualYear}` : ''}${
+        isAggregate ? '&prefer=true' : ''
+      }${
+        actualQuery ? `&stitle=${encodeURIComponent(actualQuery.trim())}` : ''
+      }${actualSearchType ? `&stype=${actualSearchType}` : ''}`;
+    }
+    return '';
+  }, [
+    from,
+    actualSource,
+    actualId,
+    actualTitle,
+    actualYear,
+    isAggregate,
+    actualQuery,
+    actualSearchType,
+  ]);
+
+  const toggleFavorite = useCallback(async () => {
+    if (from === 'douban' || !actualSource || !actualId) {
+      await Swal.fire({
+        icon: 'info',
+        title: '请先打开视频',
+        text: '该条目还没有播放源，打开后再收藏。',
+      });
+      return;
+    }
+    try {
+      if (favorited) {
+        const { isConfirmed } = await Swal.fire({
+          title: '取消收藏？',
+          text: actualTitle
+            ? `将「${actualTitle}」移出收藏夹`
+            : '确定取消收藏？',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: '取消收藏',
+          cancelButtonText: '返回',
+          confirmButtonColor: '#dc2626',
+        });
+        if (!isConfirmed) return;
+        await deleteFavorite(actualSource, actualId);
+        setFavorited(false);
+      } else {
+        await saveFavorite(actualSource, actualId, {
+          title: actualTitle,
+          source_name: source_name || '',
+          year: actualYear || '',
+          cover: actualPoster,
+          total_episodes: actualEpisodes ?? 1,
+          save_time: Date.now(),
+        });
+        setFavorited(true);
+      }
+    } catch (err) {
+      throw new Error('切换收藏状态失败');
+    }
+  }, [
+    from,
+    actualSource,
+    actualId,
+    actualTitle,
+    source_name,
+    actualYear,
+    actualPoster,
+    actualEpisodes,
+    favorited,
+  ]);
+
   const handleToggleFavorite = useCallback(
     async (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      if (from === 'douban' || !actualSource || !actualId) return;
-      try {
-        if (favorited) {
-          const { isConfirmed } = await Swal.fire({
-            title: '取消收藏？',
-            text: actualTitle
-              ? `将「${actualTitle}」移出收藏夹`
-              : '确定取消收藏？',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: '取消收藏',
-            cancelButtonText: '返回',
-            confirmButtonColor: '#dc2626',
-          });
-          if (!isConfirmed) return;
-          await deleteFavorite(actualSource, actualId);
-          setFavorited(false);
-        } else {
-          await saveFavorite(actualSource, actualId, {
-            title: actualTitle,
-            source_name: source_name || '',
-            year: actualYear || '',
-            cover: actualPoster,
-            total_episodes: actualEpisodes ?? 1,
-            save_time: Date.now(),
-          });
-          setFavorited(true);
-        }
-      } catch (err) {
-        throw new Error('切换收藏状态失败');
-      }
+      await toggleFavorite();
     },
-    [
-      from,
-      actualSource,
-      actualId,
-      actualTitle,
-      source_name,
-      actualYear,
-      actualPoster,
-      actualEpisodes,
-      favorited,
-    ]
+    [toggleFavorite]
   );
 
   const handleDeleteRecord = useCallback(
@@ -213,34 +257,49 @@ export default function VideoCard({
   );
 
   const handleClick = useCallback(() => {
-    if (from === 'douban') {
-      router.push(
-        `/play?title=${encodeURIComponent(actualTitle.trim())}${
-          actualYear ? `&year=${actualYear}` : ''
-        }${actualSearchType ? `&stype=${actualSearchType}` : ''}`
-      );
-    } else if (actualSource && actualId) {
-      router.push(
-        `/play?source=${actualSource}&id=${actualId}&title=${encodeURIComponent(
-          actualTitle
-        )}${actualYear ? `&year=${actualYear}` : ''}${
-          isAggregate ? '&prefer=true' : ''
-        }${
-          actualQuery ? `&stitle=${encodeURIComponent(actualQuery.trim())}` : ''
-        }${actualSearchType ? `&stype=${actualSearchType}` : ''}`
-      );
-    }
-  }, [
-    from,
-    actualSource,
-    actualId,
-    router,
-    actualTitle,
-    actualYear,
-    isAggregate,
-    actualQuery,
-    actualSearchType,
-  ]);
+    const href = getPlayHref();
+    if (href) router.push(href);
+  }, [getPlayHref, router]);
+
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const menuWidth = 176;
+    const menuHeight = 88;
+    const x = Math.min(e.clientX, window.innerWidth - menuWidth - 8);
+    const y = Math.min(e.clientY, window.innerHeight - menuHeight - 8);
+    setContextMenu({ x: Math.max(8, x), y: Math.max(8, y) });
+  }, []);
+
+  const handleOpenNewTab = useCallback(() => {
+    const href = getPlayHref();
+    if (href) window.open(href, '_blank', 'noopener,noreferrer');
+    setContextMenu(null);
+  }, [getPlayHref]);
+
+  const handleFavoriteFromMenu = useCallback(async () => {
+    setContextMenu(null);
+    await toggleFavorite();
+  }, [toggleFavorite]);
+
+  useEffect(() => {
+    if (!contextMenu) return;
+    const close = () => setContextMenu(null);
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') close();
+    };
+    const timer = window.setTimeout(() => {
+      window.addEventListener('click', close);
+      window.addEventListener('scroll', close, true);
+    }, 0);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('click', close);
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [contextMenu]);
 
   const config = useMemo(() => {
     const configs = {
@@ -288,6 +347,7 @@ export default function VideoCard({
     <div
       className='group relative w-full rounded-lg bg-transparent cursor-pointer transition-all duration-300 ease-in-out hover:scale-[1.05] hover:z-[500]'
       onClick={handleClick}
+      onContextMenu={handleContextMenu}
     >
       {/* 海报容器 */}
       <div className='relative aspect-[2/3] overflow-hidden rounded-lg'>
@@ -419,6 +479,33 @@ export default function VideoCard({
           </span>
         )}
       </div>
+
+      {contextMenu &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            className='fixed z-[2000] min-w-[11rem] py-1 rounded-lg bg-white/95 dark:bg-gray-800/95 shadow-xl border border-gray-200/80 dark:border-gray-700/80 backdrop-blur-sm'
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+            onClick={(e) => e.stopPropagation()}
+            onContextMenu={(e) => e.preventDefault()}
+          >
+            <button
+              type='button'
+              className='w-full px-3 py-2 text-left text-sm text-gray-800 dark:text-gray-100 hover:bg-green-50 dark:hover:bg-green-900/30'
+              onClick={handleOpenNewTab}
+            >
+              新建tab打开视频
+            </button>
+            <button
+              type='button'
+              className='w-full px-3 py-2 text-left text-sm text-gray-800 dark:text-gray-100 hover:bg-green-50 dark:hover:bg-green-900/30'
+              onClick={handleFavoriteFromMenu}
+            >
+              {favorited ? '取消收藏' : '收藏视频'}
+            </button>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
