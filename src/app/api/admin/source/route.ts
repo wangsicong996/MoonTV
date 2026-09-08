@@ -10,7 +10,7 @@ import { IStorage } from '@/lib/types';
 export const runtime = 'edge';
 
 // 支持的操作类型
-type Action = 'add' | 'disable' | 'enable' | 'delete' | 'sort';
+type Action = 'add' | 'disable' | 'enable' | 'delete' | 'sort' | 'sidebar';
 
 interface BaseBody {
   action?: Action;
@@ -38,7 +38,14 @@ export async function POST(request: NextRequest) {
     const username = authInfo.username;
 
     // 基础校验
-    const ACTIONS: Action[] = ['add', 'disable', 'enable', 'delete', 'sort'];
+    const ACTIONS: Action[] = [
+      'add',
+      'disable',
+      'enable',
+      'delete',
+      'sort',
+      'sidebar',
+    ];
     if (!username || !action || !ACTIONS.includes(action)) {
       return NextResponse.json({ error: '参数格式错误' }, { status: 400 });
     }
@@ -78,6 +85,7 @@ export async function POST(request: NextRequest) {
           detail,
           from: 'custom',
           disabled: false,
+          sidebar: false,
         });
         break;
       }
@@ -113,6 +121,21 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: '该源不可删除' }, { status: 400 });
         }
         adminConfig.SourceConfig.splice(idx, 1);
+        break;
+      }
+      case 'sidebar': {
+        const { key, sidebar } = body as { key?: string; sidebar?: boolean };
+        if (!key)
+          return NextResponse.json({ error: '缺少 key 参数' }, { status: 400 });
+        if (typeof sidebar !== 'boolean')
+          return NextResponse.json(
+            { error: '缺少 sidebar 参数' },
+            { status: 400 }
+          );
+        const entry = adminConfig.SourceConfig.find((s) => s.key === key);
+        if (!entry)
+          return NextResponse.json({ error: '源不存在' }, { status: 404 });
+        entry.sidebar = sidebar;
         break;
       }
       case 'sort': {

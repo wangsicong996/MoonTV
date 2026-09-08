@@ -2,9 +2,9 @@
 
 'use client';
 
-import { Clover, Film, Home, Search, Star, Tv } from 'lucide-react';
+import { Clover, Film, Home, Radio, Search, Star, Tv } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 interface MobileBottomNavProps {
@@ -16,11 +16,14 @@ interface MobileBottomNavProps {
 
 const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   // 当前激活路径：优先使用传入的 activePath，否则回退到浏览器地址
   const currentActive = activePath ?? pathname;
 
-  const [navItems, setNavItems] = useState([
+  const [navItems, setNavItems] = useState<
+    { icon: any; label: string; href: string }[]
+  >([
     { icon: Home, label: '首页', href: '/' },
     { icon: Search, label: '搜索', href: '/search' },
     {
@@ -52,6 +55,26 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
         },
       ]);
     }
+
+    fetch('/api/nav-sources')
+      .then((resp) => (resp.ok ? resp.json() : { sources: [] }))
+      .then((data) => {
+        if (!Array.isArray(data?.sources) || data.sources.length === 0) return;
+        setNavItems((prevItems) => {
+          const existing = new Set(prevItems.map((item) => item.href));
+          const extras = data.sources
+            .map((source: { key: string; name: string }) => ({
+              icon: Radio,
+              label: source.name,
+              href: `/source?key=${encodeURIComponent(source.key)}`,
+            }))
+            .filter((item: { href: string }) => !existing.has(item.href));
+          return extras.length ? [...prevItems, ...extras] : prevItems;
+        });
+      })
+      .catch(() => {
+        // ignore
+      });
   }, []);
 
   const isActive = (href: string) => {
@@ -61,10 +84,16 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
     const decodedActive = decodeURIComponent(currentActive);
     const decodedItemHref = decodeURIComponent(href);
 
+    const keyMatch = href.match(/[?&]key=([^&]+)/)?.[1];
+    const currentKey = searchParams.get('key');
+
     return (
       decodedActive === decodedItemHref ||
       (decodedActive.startsWith('/douban') &&
-        decodedActive.includes(`type=${typeMatch}`))
+        decodedActive.includes(`type=${typeMatch}`)) ||
+      (pathname === '/source' &&
+        !!keyMatch &&
+        currentKey === decodeURIComponent(keyMatch))
     );
   };
 

@@ -2,7 +2,7 @@
 
 'use client';
 
-import { Clover, Film, Home, Menu, Search, Star, Tv } from 'lucide-react';
+import { Clover, Film, Home, Menu, Radio, Search, Star, Tv } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -14,6 +14,7 @@ import {
   useState,
 } from 'react';
 
+import BrandLogo from './BrandLogo';
 import UserDataBackupButtons from './UserDataBackup';
 
 interface SidebarContextType {
@@ -26,17 +27,9 @@ const SidebarContext = createContext<SidebarContextType>({
 
 export const useSidebar = () => useContext(SidebarContext);
 
-// 可替换为你自己的 logo 图片
 const Logo = () => {
   return (
-    <Link
-      href='/'
-      className='flex items-center justify-center h-16 select-none hover:opacity-80 transition-opacity duration-200'
-    >
-      <span className='text-2xl font-bold text-[#FFC107] tracking-tight'>
-        suntv
-      </span>
-    </Link>
+    <BrandLogo className='h-16' textClassName='text-2xl' />
   );
 };
 
@@ -140,6 +133,9 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
       href: '/douban?type=show',
     },
   ]);
+  const [sidebarSources, setSidebarSources] = useState<
+    { key: string; name: string }[]
+  >([]);
 
   useEffect(() => {
     const runtimeConfig = (window as any).RUNTIME_CONFIG;
@@ -153,6 +149,19 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
         },
       ]);
     }
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/nav-sources')
+      .then((resp) => (resp.ok ? resp.json() : { sources: [] }))
+      .then((data) => {
+        if (Array.isArray(data?.sources)) {
+          setSidebarSources(data.sources);
+        }
+      })
+      .catch(() => {
+        setSidebarSources([]);
+      });
   }, []);
 
   return (
@@ -265,6 +274,39 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
                       {!isCollapsed && (
                         <span className='whitespace-nowrap transition-opacity duration-200 opacity-100'>
                           {item.label}
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })}
+                {sidebarSources.map((source) => {
+                  const href = `/source?key=${encodeURIComponent(source.key)}`;
+                  const isActive =
+                    pathname === '/source' &&
+                    searchParams.get('key') === source.key;
+                  return (
+                    <Link
+                      key={`source-${source.key}`}
+                      href={href}
+                      onClick={() => setActive(href)}
+                      data-active={isActive}
+                      title={source.name}
+                      className={`group flex items-center rounded-lg px-2 py-2 pl-4 text-sm text-gray-700 hover:bg-gray-100/30 hover:text-green-600 data-[active=true]:bg-green-500/20 data-[active=true]:text-green-700 transition-colors duration-200 min-h-[40px] dark:text-gray-300 dark:hover:text-green-400 dark:data-[active=true]:bg-green-500/10 dark:data-[active=true]:text-green-400 ${
+                        isCollapsed ? 'w-full max-w-none mx-0' : 'mx-0'
+                      } gap-3 justify-start`}
+                    >
+                      <div className='w-4 h-4 flex items-center justify-center'>
+                        {isCollapsed ? (
+                          <span className='text-xs font-medium text-gray-500 group-hover:text-green-600 dark:text-gray-400 dark:group-hover:text-green-400'>
+                            {source.name.slice(0, 1)}
+                          </span>
+                        ) : (
+                          <Radio className='h-4 w-4 text-gray-500 group-hover:text-green-600 data-[active=true]:text-green-700 dark:text-gray-400 dark:group-hover:text-green-400 dark:data-[active=true]:text-green-400' />
+                        )}
+                      </div>
+                      {!isCollapsed && (
+                        <span className='whitespace-nowrap transition-opacity duration-200 opacity-100 truncate'>
+                          {source.name}
                         </span>
                       )}
                     </Link>

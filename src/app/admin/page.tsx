@@ -69,7 +69,35 @@ interface DataSource {
   api: string;
   detail?: string;
   disabled?: boolean;
+  sidebar?: boolean;
   from: 'config' | 'custom';
+}
+
+function IosSwitch({
+  checked,
+  onChange,
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+}) {
+  return (
+    <button
+      type='button'
+      role='switch'
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      onPointerDown={(e) => e.stopPropagation()}
+      className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors duration-200 ${
+        checked ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
+      }`}
+    >
+      <span
+        className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform duration-200 ${
+          checked ? 'translate-x-5' : 'translate-x-0.5'
+        }`}
+      />
+    </button>
+  );
 }
 
 // 自定义分类数据类型
@@ -649,6 +677,7 @@ const VideoSourceConfig = ({
     api: '',
     detail: '',
     disabled: false,
+    sidebar: false,
     from: 'config',
   });
 
@@ -707,6 +736,21 @@ const VideoSourceConfig = ({
     });
   };
 
+  const handleToggleSidebar = (key: string) => {
+    const target = sources.find((s) => s.key === key);
+    if (!target) return;
+    const next = !target.sidebar;
+    setSources((prev) =>
+      prev.map((s) => (s.key === key ? { ...s, sidebar: next } : s))
+    );
+    callSourceApi({ action: 'sidebar', key, sidebar: next }).catch(() => {
+      setSources((prev) =>
+        prev.map((s) => (s.key === key ? { ...s, sidebar: !next } : s))
+      );
+      console.error('操作失败', 'sidebar', key);
+    });
+  };
+
   const handleDelete = (key: string) => {
     callSourceApi({ action: 'delete', key }).catch(() => {
       console.error('操作失败', 'delete', key);
@@ -729,6 +773,7 @@ const VideoSourceConfig = ({
           api: '',
           detail: '',
           disabled: false,
+          sidebar: false,
           from: 'custom',
         });
         setShowAddForm(false);
@@ -811,6 +856,12 @@ const VideoSourceConfig = ({
             {!source.disabled ? '启用中' : '已禁用'}
           </span>
         </td>
+        <td className='px-6 py-4 whitespace-nowrap'>
+          <IosSwitch
+            checked={!!source.sidebar}
+            onChange={() => handleToggleSidebar(source.key)}
+          />
+        </td>
         <td className='px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2'>
           <button
             onClick={() => handleToggleEnable(source.key)}
@@ -847,9 +898,14 @@ const VideoSourceConfig = ({
     <div className='space-y-6'>
       {/* 添加视频源表单 */}
       <div className='flex items-center justify-between'>
-        <h4 className='text-sm font-medium text-gray-700 dark:text-gray-300'>
-          视频源列表
-        </h4>
+        <div>
+          <h4 className='text-sm font-medium text-gray-700 dark:text-gray-300'>
+            视频源列表
+          </h4>
+          <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
+            打开「侧栏」开关后，该源会出现在首页左侧菜单中
+          </p>
+        </div>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
           className='px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors'
@@ -930,6 +986,9 @@ const VideoSourceConfig = ({
               </th>
               <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
                 状态
+              </th>
+              <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
+                侧栏
               </th>
               <th className='px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
                 操作

@@ -114,6 +114,7 @@ async function initConfig() {
               detail: site.detail,
               from: 'config',
               disabled: false,
+              sidebar: false,
             });
           }
         });
@@ -232,6 +233,7 @@ async function initConfig() {
             detail: site.detail,
             from: 'config',
             disabled: false,
+            sidebar: false,
           })),
           CustomCategories: customCategories.map((category) => ({
             name: category.name,
@@ -280,6 +282,7 @@ async function initConfig() {
         detail: site.detail,
         from: 'config',
         disabled: false,
+        sidebar: false,
       })),
       CustomCategories:
         fileConfig.custom_category?.map((category) => ({
@@ -349,6 +352,7 @@ export async function getConfig(): Promise<AdminConfig> {
           detail: site.detail,
           from: 'config',
           disabled: false,
+          sidebar: false,
         });
       }
     });
@@ -491,6 +495,7 @@ export async function resetConfig() {
       detail: site.detail,
       from: 'config',
       disabled: false,
+      sidebar: false,
     })),
     CustomCategories:
       storageType === 'redis'
@@ -530,4 +535,16 @@ export async function getAvailableApiSites(): Promise<ApiSite[]> {
     api: s.api,
     detail: s.detail,
   }));
+}
+
+export async function getSidebarApiSites(): Promise<ApiSite[]> {
+  const config = await getConfig();
+  return config.SourceConfig.filter((s) => !s.disabled && s.sidebar).map(
+    (s) => ({
+      key: s.key,
+      name: s.name,
+      api: s.api,
+      detail: s.detail,
+    })
+  );
 }

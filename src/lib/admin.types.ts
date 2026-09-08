@@ -23,6 +23,7 @@ export interface AdminConfig {
     detail?: string;
     from: 'config' | 'custom';
     disabled?: boolean;
+    sidebar?: boolean;
   }[];
   CustomCategories: {
     name?: string;

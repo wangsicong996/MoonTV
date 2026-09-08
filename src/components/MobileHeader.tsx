@@ -1,8 +1,7 @@
 'use client';
 
-import Link from 'next/link';
-
 import { BackButton } from './BackButton';
+import BrandLogo from './BrandLogo';
 import { ThemeToggle } from './ThemeToggle';
 import { UserMenu } from './UserMenu';
 
@@ -28,12 +27,7 @@ const MobileHeader = ({ showBackButton = false }: MobileHeaderProps) => {
 
       {/* 中间：Logo（绝对居中） */}
       <div className='absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'>
-        <Link
-          href='/'
-          className='text-2xl font-bold text-[#FFC107] tracking-tight hover:opacity-80 transition-opacity'
-        >
-          suntv
-        </Link>
+        <BrandLogo textClassName='text-2xl' />
       </div>
     </header>
   );
