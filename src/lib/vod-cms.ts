@@ -89,6 +89,9 @@ function toListItem(
     vod_play_from: 'm3u8',
     vod_pic: favorite.cover || '',
     vod_year: favorite.year || '',
+    vod_level: 1,
+    vod_hits: 999,
+    vod_score: '9.0',
     ...extra,
   };
 }

@@ -109,39 +109,12 @@ export function sanitizePlayName(name: string): string {
   return (name || 'm3u8').replace(/[$#,]/g, '_');
 }
 
+export const VOD_HOME_TYPE_ID = 5;
+
 export const VOD_CLASS_LIST = [
-  { type_id: 1, type_pid: 0, type_name: '电影片' },
+  { type_id: VOD_HOME_TYPE_ID, type_pid: 0, type_name: '首页' },
+  { type_id: 1, type_pid: 0, type_name: '电影' },
   { type_id: 2, type_pid: 0, type_name: '连续剧' },
-  { type_id: 3, type_pid: 0, type_name: '综艺片' },
-  { type_id: 4, type_pid: 0, type_name: '动漫片' },
-  { type_id: 6, type_pid: 1, type_name: '动作片' },
-  { type_id: 7, type_pid: 1, type_name: '喜剧片' },
-  { type_id: 8, type_pid: 1, type_name: '爱情片' },
-  { type_id: 9, type_pid: 1, type_name: '科幻片' },
-  { type_id: 10, type_pid: 1, type_name: '恐怖片' },
-  { type_id: 11, type_pid: 1, type_name: '剧情片' },
-  { type_id: 12, type_pid: 1, type_name: '战争片' },
-  { type_id: 13, type_pid: 2, type_name: '国产剧' },
-  { type_id: 14, type_pid: 2, type_name: '香港剧' },
-  { type_id: 15, type_pid: 2, type_name: '韩国剧' },
-  { type_id: 16, type_pid: 2, type_name: '欧美剧' },
-  { type_id: 20, type_pid: 1, type_name: '记录片' },
-  { type_id: 21, type_pid: 2, type_name: '台湾剧' },
-  { type_id: 22, type_pid: 2, type_name: '日本剧' },
-  { type_id: 23, type_pid: 2, type_name: '海外剧' },
-  { type_id: 24, type_pid: 2, type_name: '泰国剧' },
-  { type_id: 25, type_pid: 3, type_name: '大陆综艺' },
-  { type_id: 26, type_pid: 3, type_name: '港台综艺' },
-  { type_id: 27, type_pid: 3, type_name: '日韩综艺' },
-  { type_id: 28, type_pid: 3, type_name: '欧美综艺' },
-  { type_id: 29, type_pid: 4, type_name: '国产动漫' },
-  { type_id: 30, type_pid: 4, type_name: '日韩动漫' },
-  { type_id: 31, type_pid: 4, type_name: '欧美动漫' },
-  { type_id: 32, type_pid: 4, type_name: '港台动漫' },
-  { type_id: 33, type_pid: 4, type_name: '海外动漫' },
-  { type_id: 34, type_pid: 1, type_name: '伦理片' },
-  { type_id: 36, type_pid: 2, type_name: '短剧' },
-  { type_id: 37, type_pid: 1, type_name: '动画片' },
 ];
 
 const MOVIE_TYPES = new Set([1, 6, 7, 8, 9, 10, 11, 12, 20, 34, 37]);
@@ -149,12 +122,12 @@ const TV_TYPES = new Set([2, 13, 14, 15, 16, 21, 22, 23, 24, 36]);
 
 export function vodTypeOf(isTv: boolean): { type_id: number; type_name: string } {
   return isTv
-    ? { type_id: 13, type_name: '国产剧' }
-    : { type_id: 11, type_name: '剧情片' };
+    ? { type_id: 2, type_name: '连续剧' }
+    : { type_id: 1, type_name: '电影' };
 }
 
 export function matchesVodType(isTv: boolean, typeId: number): boolean {
-  if (!typeId) return true;
+  if (!typeId || typeId === VOD_HOME_TYPE_ID) return true;
   if (MOVIE_TYPES.has(typeId)) return !isTv;
   if (TV_TYPES.has(typeId)) return isTv;
   return true;
