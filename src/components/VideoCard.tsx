@@ -155,19 +155,21 @@ export default function VideoCard({
       if (from === 'douban' || !actualSource || !actualId) return;
       try {
         if (favorited) {
+          const { isConfirmed } = await Swal.fire({
+            title: '取消收藏？',
+            text: actualTitle
+              ? `将「${actualTitle}」移出收藏夹`
+              : '确定取消收藏？',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: '取消收藏',
+            cancelButtonText: '返回',
+            confirmButtonColor: '#dc2626',
+          });
+          if (!isConfirmed) return;
           await deleteFavorite(actualSource, actualId);
           setFavorited(false);
         } else {
-          const { isConfirmed } = await Swal.fire({
-            title: '加入收藏？',
-            text: actualTitle ? `收藏「${actualTitle}」` : '确定加入收藏夹？',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: '收藏',
-            cancelButtonText: '取消',
-            confirmButtonColor: '#16a34a',
-          });
-          if (!isConfirmed) return;
           await saveFavorite(actualSource, actualId, {
             title: actualTitle,
             source_name: source_name || '',

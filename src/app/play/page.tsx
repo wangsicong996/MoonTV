@@ -957,21 +957,21 @@ function PlayPageClient() {
 
     try {
       if (favorited) {
+        const { isConfirmed } = await Swal.fire({
+          title: '取消收藏？',
+          text: videoTitleRef.current
+            ? `将「${videoTitleRef.current}」移出收藏夹`
+            : '确定取消收藏？',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: '取消收藏',
+          cancelButtonText: '返回',
+          confirmButtonColor: '#dc2626',
+        });
+        if (!isConfirmed) return;
         await deleteFavorite(currentSourceRef.current, currentIdRef.current);
         setFavorited(false);
       } else {
-        const { isConfirmed } = await Swal.fire({
-          title: '加入收藏？',
-          text: videoTitleRef.current
-            ? `收藏「${videoTitleRef.current}」`
-            : '确定加入收藏夹？',
-          icon: 'question',
-          showCancelButton: true,
-          confirmButtonText: '收藏',
-          cancelButtonText: '取消',
-          confirmButtonColor: '#16a34a',
-        });
-        if (!isConfirmed) return;
         await saveFavorite(currentSourceRef.current, currentIdRef.current, {
           title: videoTitleRef.current,
           source_name: detailRef.current?.source_name || '',
