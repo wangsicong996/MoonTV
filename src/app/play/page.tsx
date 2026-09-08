@@ -4,7 +4,7 @@
 
 import Artplayer from 'artplayer';
 import Hls from 'hls.js';
-import { Heart } from 'lucide-react';
+import { Copy, Heart } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useRef, useState } from 'react';
 
@@ -51,6 +51,8 @@ function PlayPageClient() {
 
   // 收藏状态
   const [favorited, setFavorited] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
+  const [shareBusy, setShareBusy] = useState(false);
 
   // 跳过片头片尾配置
   const [skipConfig, setSkipConfig] = useState<{
@@ -1160,6 +1162,34 @@ function PlayPageClient() {
     }
   };
 
+  const handleCopyAppleTvLink = async () => {
+    if (!currentSourceRef.current || !currentIdRef.current || shareBusy) return;
+    setShareBusy(true);
+    try {
+      const res = await fetch('/api/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source: currentSourceRef.current,
+          id: currentIdRef.current,
+          episode: currentEpisodeIndexRef.current,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.url) {
+        throw new Error(data.error || '生成链接失败');
+      }
+      await navigator.clipboard.writeText(data.url);
+      setShareCopied(true);
+      window.setTimeout(() => setShareCopied(false), 2500);
+    } catch (err) {
+      console.error('复制 Apple TV 链接失败:', err);
+      alert(err instanceof Error ? err.message : '复制失败');
+    } finally {
+      setShareBusy(false);
+    }
+  };
+
   useEffect(() => {
     if (
       !Artplayer ||
@@ -1926,6 +1956,19 @@ function PlayPageClient() {
                   {detail.desc}
                 </div>
               )}
+              <button
+                type='button'
+                onClick={handleCopyAppleTvLink}
+                disabled={shareBusy || !currentSource || !currentId}
+                className='mt-4 self-start inline-flex items-center gap-2 rounded-lg bg-[#FFC107] text-black px-4 py-2 text-sm font-semibold hover:brightness-95 disabled:opacity-60'
+              >
+                <Copy className='h-4 w-4' />
+                {shareCopied
+                  ? '已复制，5 小时内有效'
+                  : shareBusy
+                  ? '正在生成...'
+                  : '复制 Apple TV 播放链接'}
+              </button>
             </div>
           </div>
 
