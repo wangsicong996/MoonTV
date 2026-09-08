@@ -9,6 +9,23 @@ const nextConfig = {
   reactStrictMode: false,
   swcMinify: true,
 
+  async rewrites() {
+    return [
+      {
+        source: '/api.php/provide/vod/:token/at/json',
+        destination: '/api/vod/:token',
+      },
+      {
+        source: '/api.php/provide/vod/:token/',
+        destination: '/api/vod/:token',
+      },
+      {
+        source: '/api.php/provide/vod/:token',
+        destination: '/api/vod/:token',
+      },
+    ];
+  },
+
   async headers() {
     return [
       {

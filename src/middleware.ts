@@ -126,6 +126,8 @@ function shouldSkipAuth(pathname: string): boolean {
     '/logo.png',
     '/screenshot.png',
     '/share',
+    '/api/vod',
+    '/api.php',
   ];
 
   return skipPaths.some((path) => pathname.startsWith(path));
@@ -134,6 +136,6 @@ function shouldSkipAuth(pathname: string): boolean {
 // 配置middleware匹配规则
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|login|warning|share|api/login|api/register|api/logout|api/cron|api/server-config|api/image-proxy|api/share).*)',
+    '/((?!_next/static|_next/image|favicon.ico|login|warning|share|api/login|api/register|api/logout|api/cron|api/server-config|api/image-proxy|api/share|api/vod).*)',
   ],
 };

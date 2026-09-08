@@ -11,6 +11,7 @@ import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
 import { checkForUpdates, CURRENT_VERSION, UpdateStatus } from '@/lib/version';
 
 import UserDataBackupButtons from './UserDataBackup';
+import VodSubscribe from './VodSubscribe';
 
 interface AuthInfo {
   username?: string;
@@ -615,6 +616,18 @@ export const UserMenu: React.FC = () => {
               onChange={(e) => handleImageProxyUrlChange(e.target.value)}
               disabled={!enableImageProxy}
             />
+          </div>
+
+          <div className='border-t border-gray-200 dark:border-gray-700'></div>
+
+          <div className='space-y-2'>
+            <h4 className='text-sm font-medium text-gray-700 dark:text-gray-300'>
+              VOD 订阅（收藏夹）
+            </h4>
+            <p className='text-xs text-gray-500 dark:text-gray-400'>
+              把地址填进 TVBox、CatVod 等苹果 CMS 播放器，首页会显示当前账号收藏，点开后拉取对应源的 m3u8 和集数。
+            </p>
+            <VodSubscribe />
           </div>
 
           <div className='border-t border-gray-200 dark:border-gray-700'></div>
