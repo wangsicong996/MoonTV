@@ -625,7 +625,7 @@ export const UserMenu: React.FC = () => {
               VOD 订阅（收藏夹）
             </h4>
             <p className='text-xs text-gray-500 dark:text-gray-400'>
-              复制后填到播放器资源站，路径必须是 /api.php/provide/vod。播放器首页就是当前账号收藏夹。点「更新 VOD 线路」会按当前网络测速，把收藏和 VOD 都换成最优源。
+              复制后填到播放器资源站，路径必须是 /api.php/provide/vod。播放器首页就是当前账号收藏夹。展开「只更新最近收藏夹内容」可只测最近 3 / 10 / 50 条；「更新全部 VOD 线路」会按当前网络测速，把收藏和 VOD 都换成最优源。
             </p>
             <VodSubscribe />
           </div>

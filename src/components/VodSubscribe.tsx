@@ -2,7 +2,7 @@
 
 'use client';
 
-import { Check, Copy, Loader2, RefreshCw } from 'lucide-react';
+import { Check, ChevronDown, Copy, Loader2, RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import {
@@ -58,6 +58,7 @@ export default function VodSubscribe() {
   const [optimizing, setOptimizing] = useState(false);
   const [optimizeProgress, setOptimizeProgress] = useState('');
   const [optimizeSummary, setOptimizeSummary] = useState('');
+  const [recentOpen, setRecentOpen] = useState(false);
 
   useEffect(() => {
     setStorageType(getStorageType());
@@ -87,15 +88,18 @@ export default function VodSubscribe() {
     window.setTimeout(() => setCopied(''), 2000);
   };
 
-  const handleOptimize = async () => {
+  const handleOptimize = async (limit?: number) => {
     if (optimizing) return;
     setOptimizing(true);
     setOptimizeSummary('');
     setOptimizeProgress('正在读取收藏夹...');
     try {
-      const results = await optimizeFavoriteSources((current, total, title) => {
-        setOptimizeProgress(`正在测速 ${current}/${total}：${title}`);
-      });
+      const results = await optimizeFavoriteSources(
+        (current, total, title) => {
+          setOptimizeProgress(`正在测速 ${current}/${total}：${title}`);
+        },
+        limit ? { limit } : undefined
+      );
       setOptimizeProgress('');
       setOptimizeSummary(summarize(results));
     } catch (err) {
@@ -166,8 +170,49 @@ export default function VodSubscribe() {
 
       <div className='pt-1 space-y-2'>
         <p className='text-xs text-gray-500 dark:text-gray-400'>
-          在当前网络下，按播放页换源 tab 同一套 ping/测速，给每部收藏挑最优线路，并改写收藏和 VOD 的 m3u8。全部不通则跳过。请在和 VOD 播放器同一网络下点。
+          在当前网络下，按播放页换源 tab 同一套 ping/测速，给收藏挑最优线路，并改写收藏和 VOD 的 m3u8。全部不通则跳过。请在和 VOD 播放器同一网络下点。
         </p>
+
+        <div className='rounded-md border border-gray-200 dark:border-gray-700 overflow-hidden'>
+          <button
+            type='button'
+            onClick={() => setRecentOpen((open) => !open)}
+            disabled={optimizing}
+            className='w-full flex items-center justify-between px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-60'
+          >
+            <span>只更新最近收藏夹内容</span>
+            <ChevronDown
+              className={`w-4 h-4 text-gray-500 transition-transform ${
+                recentOpen ? 'rotate-180' : ''
+              }`}
+            />
+          </button>
+          {recentOpen && (
+            <div className='border-t border-gray-200 dark:border-gray-700 p-2 space-y-1.5 bg-gray-50/70 dark:bg-gray-800/40'>
+              {[
+                { limit: 3, label: '最近 3 个视频' },
+                { limit: 10, label: '最近 10 个视频' },
+                { limit: 50, label: '最近 50 个视频' },
+              ].map((item) => (
+                <button
+                  key={item.limit}
+                  type='button'
+                  onClick={() => void handleOptimize(item.limit)}
+                  disabled={optimizing}
+                  className='w-full inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-gray-800 disabled:opacity-60'
+                >
+                  {optimizing ? (
+                    <Loader2 className='w-4 h-4 animate-spin' />
+                  ) : (
+                    <RefreshCw className='w-4 h-4' />
+                  )}
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         <button
           type='button'
           onClick={() => void handleOptimize()}
@@ -179,7 +224,7 @@ export default function VodSubscribe() {
           ) : (
             <RefreshCw className='w-4 h-4' />
           )}
-          更新 VOD 线路
+          更新全部 VOD 线路（收藏夹视频选优）
         </button>
         {optimizeProgress && (
           <p className='text-xs text-gray-500 dark:text-gray-400'>

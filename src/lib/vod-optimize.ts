@@ -72,17 +72,24 @@ async function fetchCurrentDetail(
 }
 
 export async function optimizeFavoriteSources(
-  onProgress?: (current: number, total: number, title: string) => void
+  onProgress?: (current: number, total: number, title: string) => void,
+  options?: { limit?: number }
 ): Promise<OptimizeItemResult[]> {
   const all = await getAllFavorites();
-  const entries = Object.entries(all);
+  const entries = Object.entries(all).sort(
+    ([, a], [, b]) => (b.save_time || 0) - (a.save_time || 0)
+  );
+  const selected =
+    options?.limit && options.limit > 0
+      ? entries.slice(0, options.limit)
+      : entries;
   const results: OptimizeItemResult[] = [];
 
-  for (let index = 0; index < entries.length; index += 1) {
-    const [key, favorite] = entries[index];
+  for (let index = 0; index < selected.length; index += 1) {
+    const [key, favorite] = selected[index];
     const parsed = splitStorageKey(key);
     const title = favorite.title || '未命名';
-    onProgress?.(index + 1, entries.length, title);
+    onProgress?.(index + 1, selected.length, title);
 
     if (!parsed) {
       results.push({ title, status: 'failed', message: '收藏键无效' });
