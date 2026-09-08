@@ -5,7 +5,7 @@
 import { CheckCircle, Heart, Link, PlayCircleIcon } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Swal from 'sweetalert2';
 
@@ -66,6 +66,7 @@ export default function VideoCard({
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(
     null
   );
+  const suppressClickRef = useRef(false);
 
   const isAggregate = from === 'search' && !!items?.length;
 
@@ -208,17 +209,18 @@ export default function VideoCard({
         setFavorited(false);
       } else {
         await saveFavorite(actualSource, actualId, {
-          title: actualTitle,
-          source_name: source_name || '',
+          title: actualTitle.trim() || '未命名',
+          source_name: source_name || actualSource,
           year: actualYear || '',
-          cover: actualPoster,
-          total_episodes: actualEpisodes ?? 1,
+          cover: actualPoster || '',
+          total_episodes: actualEpisodes || 1,
           save_time: Date.now(),
+          search_title: actualQuery || undefined,
         });
         setFavorited(true);
       }
     } catch (err) {
-      throw new Error('切换收藏状态失败');
+      console.error('切换收藏状态失败', err);
     }
   }, [
     from,
@@ -229,6 +231,7 @@ export default function VideoCard({
     actualYear,
     actualPoster,
     actualEpisodes,
+    actualQuery,
     favorited,
   ]);
 
@@ -257,6 +260,10 @@ export default function VideoCard({
   );
 
   const handleClick = useCallback(() => {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return;
+    }
     const href = getPlayHref();
     if (href) router.push(href);
   }, [getPlayHref, router]);
@@ -271,16 +278,28 @@ export default function VideoCard({
     setContextMenu({ x: Math.max(8, x), y: Math.max(8, y) });
   }, []);
 
-  const handleOpenNewTab = useCallback(() => {
-    const href = getPlayHref();
-    if (href) window.open(href, '_blank', 'noopener,noreferrer');
-    setContextMenu(null);
-  }, [getPlayHref]);
+  const handleOpenNewTab = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      suppressClickRef.current = true;
+      const href = getPlayHref();
+      if (href) window.open(href, '_blank', 'noopener,noreferrer');
+      setContextMenu(null);
+    },
+    [getPlayHref]
+  );
 
-  const handleFavoriteFromMenu = useCallback(async () => {
-    setContextMenu(null);
-    await toggleFavorite();
-  }, [toggleFavorite]);
+  const handleFavoriteFromMenu = useCallback(
+    async (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      suppressClickRef.current = true;
+      setContextMenu(null);
+      await toggleFavorite();
+    },
+    [toggleFavorite]
+  );
 
   useEffect(() => {
     if (!contextMenu) return;
@@ -486,6 +505,7 @@ export default function VideoCard({
           <div
             className='fixed z-[2000] min-w-[11rem] py-1 rounded-lg bg-white/95 dark:bg-gray-800/95 shadow-xl border border-gray-200/80 dark:border-gray-700/80 backdrop-blur-sm'
             style={{ left: contextMenu.x, top: contextMenu.y }}
+            onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
             onContextMenu={(e) => e.preventDefault()}
           >
