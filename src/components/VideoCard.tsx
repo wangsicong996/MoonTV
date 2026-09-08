@@ -9,6 +9,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom';
 import Swal from 'sweetalert2';
 
+import { triggerGlobalToast } from '@/components/GlobalErrorIndicator';
+import { ImagePlaceholder } from '@/components/ImagePlaceholder';
 import {
   deleteFavorite,
   deletePlayRecord,
@@ -19,8 +21,6 @@ import {
 } from '@/lib/db.client';
 import { SearchResult } from '@/lib/types';
 import { getBuiltinImageProxyUrl, processImageUrl } from '@/lib/utils';
-
-import { ImagePlaceholder } from '@/components/ImagePlaceholder';
 
 interface VideoCardProps {
   id?: string;
@@ -182,6 +182,50 @@ export default function VideoCard({
     actualSearchType,
   ]);
 
+  const addFavorite = useCallback(async () => {
+    if (from === 'douban' || !actualSource || !actualId) {
+      await Swal.fire({
+        icon: 'info',
+        title: '请先打开视频',
+        text: '该条目还没有播放源，打开后再收藏。',
+      });
+      return;
+    }
+    try {
+      const already =
+        favorited || (await isFavorited(actualSource, actualId));
+      if (already) {
+        setFavorited(true);
+        triggerGlobalToast('已经收藏', 'warning');
+        return;
+      }
+      await saveFavorite(actualSource, actualId, {
+        title: actualTitle.trim() || '未命名',
+        source_name: source_name || actualSource,
+        year: actualYear || '',
+        cover: actualPoster || '',
+        total_episodes: actualEpisodes || 1,
+        save_time: Date.now(),
+        search_title: actualQuery || undefined,
+      });
+      setFavorited(true);
+      triggerGlobalToast('收藏成功', 'success');
+    } catch (err) {
+      console.error('收藏失败', err);
+    }
+  }, [
+    from,
+    actualSource,
+    actualId,
+    actualTitle,
+    source_name,
+    actualYear,
+    actualPoster,
+    actualEpisodes,
+    actualQuery,
+    favorited,
+  ]);
+
   const toggleFavorite = useCallback(async () => {
     if (from === 'douban' || !actualSource || !actualId) {
       await Swal.fire({
@@ -208,32 +252,12 @@ export default function VideoCard({
         await deleteFavorite(actualSource, actualId);
         setFavorited(false);
       } else {
-        await saveFavorite(actualSource, actualId, {
-          title: actualTitle.trim() || '未命名',
-          source_name: source_name || actualSource,
-          year: actualYear || '',
-          cover: actualPoster || '',
-          total_episodes: actualEpisodes || 1,
-          save_time: Date.now(),
-          search_title: actualQuery || undefined,
-        });
-        setFavorited(true);
+        await addFavorite();
       }
     } catch (err) {
       console.error('切换收藏状态失败', err);
     }
-  }, [
-    from,
-    actualSource,
-    actualId,
-    actualTitle,
-    source_name,
-    actualYear,
-    actualPoster,
-    actualEpisodes,
-    actualQuery,
-    favorited,
-  ]);
+  }, [from, actualSource, actualId, actualTitle, favorited, addFavorite]);
 
   const handleToggleFavorite = useCallback(
     async (e: React.MouseEvent) => {
@@ -296,9 +320,9 @@ export default function VideoCard({
       e.stopPropagation();
       suppressClickRef.current = true;
       setContextMenu(null);
-      await toggleFavorite();
+      await addFavorite();
     },
-    [toggleFavorite]
+    [addFavorite]
   );
 
   useEffect(() => {
@@ -521,7 +545,7 @@ export default function VideoCard({
               className='w-full px-3 py-2 text-left text-sm text-gray-800 dark:text-gray-100 hover:bg-green-50 dark:hover:bg-green-900/30'
               onClick={handleFavoriteFromMenu}
             >
-              {favorited ? '取消收藏' : '收藏视频'}
+              收藏视频
             </button>
           </div>,
           document.body

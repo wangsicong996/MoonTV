@@ -2,77 +2,105 @@
 
 import { useEffect, useState } from 'react';
 
-interface ErrorInfo {
+type ToastType = 'error' | 'success' | 'warning';
+
+interface ToastInfo {
   id: string;
   message: string;
-  timestamp: number;
+  type: ToastType;
 }
 
+const TYPE_CLASS: Record<ToastType, string> = {
+  error: 'bg-red-500 text-white',
+  success: 'bg-green-500 text-white',
+  warning: 'bg-yellow-400 text-gray-900',
+};
+
 export function GlobalErrorIndicator() {
-  const [currentError, setCurrentError] = useState<ErrorInfo | null>(null);
+  const [currentToast, setCurrentToast] = useState<ToastInfo | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [isReplacing, setIsReplacing] = useState(false);
 
   useEffect(() => {
-    // 监听自定义错误事件
-    const handleError = (event: CustomEvent) => {
-      const { message } = event.detail;
-      const newError: ErrorInfo = {
+    const showToast = (message: string, type: ToastType) => {
+      const next: ToastInfo = {
         id: Date.now().toString(),
         message,
-        timestamp: Date.now(),
+        type,
       };
 
-      // 如果已有错误，开始替换动画
-      if (currentError) {
-        setCurrentError(newError);
-        setIsReplacing(true);
-
-        // 动画完成后恢复正常
-        setTimeout(() => {
-          setIsReplacing(false);
-        }, 200);
-      } else {
-        // 第一次显示错误
-        setCurrentError(newError);
-      }
-
+      setCurrentToast((prev) => {
+        if (prev) setIsReplacing(true);
+        return next;
+      });
       setIsVisible(true);
     };
 
-    // 监听错误事件
-    window.addEventListener('globalError', handleError as EventListener);
-
-    return () => {
-      window.removeEventListener('globalError', handleError as EventListener);
+    const handleError = (event: Event) => {
+      const message = (event as CustomEvent<{ message?: string }>).detail
+        ?.message;
+      if (message) showToast(message, 'error');
     };
-  }, [currentError]);
+
+    const handleToast = (event: Event) => {
+      const detail = (event as CustomEvent<{ message?: string; type?: ToastType }>)
+        .detail;
+      if (!detail?.message) return;
+      const type: ToastType =
+        detail.type === 'success' || detail.type === 'warning'
+          ? detail.type
+          : 'error';
+      showToast(detail.message, type);
+    };
+
+    window.addEventListener('globalError', handleError);
+    window.addEventListener('globalToast', handleToast);
+    return () => {
+      window.removeEventListener('globalError', handleError);
+      window.removeEventListener('globalToast', handleToast);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isReplacing) return;
+    const timer = window.setTimeout(() => setIsReplacing(false), 200);
+    return () => window.clearTimeout(timer);
+  }, [isReplacing]);
+
+  useEffect(() => {
+    if (!isVisible || !currentToast) return;
+    if (currentToast.type === 'error') return;
+    const timer = window.setTimeout(() => {
+      setIsVisible(false);
+      setCurrentToast(null);
+    }, 2500);
+    return () => window.clearTimeout(timer);
+  }, [isVisible, currentToast]);
 
   const handleClose = () => {
     setIsVisible(false);
-    setCurrentError(null);
+    setCurrentToast(null);
     setIsReplacing(false);
   };
 
-  if (!isVisible || !currentError) {
+  if (!isVisible || !currentToast) {
     return null;
   }
 
   return (
     <div className='fixed top-4 right-4 z-[2000]'>
-      {/* 错误卡片 */}
       <div
-        className={`bg-red-500 text-white px-4 py-3 rounded-lg shadow-lg flex items-center justify-between min-w-[300px] max-w-[400px] transition-all duration-300 ${
-          isReplacing ? 'scale-105 bg-red-400' : 'scale-100 bg-red-500'
+        className={`${TYPE_CLASS[currentToast.type]} px-4 py-3 rounded-lg shadow-lg flex items-center justify-between min-w-[300px] max-w-[400px] transition-all duration-300 ${
+          isReplacing ? 'scale-105' : 'scale-100'
         } animate-fade-in`}
       >
         <span className='text-sm font-medium flex-1 mr-3'>
-          {currentError.message}
+          {currentToast.message}
         </span>
         <button
           onClick={handleClose}
-          className='text-white hover:text-red-100 transition-colors flex-shrink-0'
-          aria-label='关闭错误提示'
+          className='opacity-80 hover:opacity-100 transition-opacity flex-shrink-0'
+          aria-label='关闭提示'
         >
           <svg
             className='w-5 h-5'
@@ -93,13 +121,18 @@ export function GlobalErrorIndicator() {
   );
 }
 
-// 全局错误触发函数
 export function triggerGlobalError(message: string) {
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(
-      new CustomEvent('globalError', {
-        detail: { message },
-      })
-    );
-  }
+  triggerGlobalToast(message, 'error');
+}
+
+export function triggerGlobalToast(
+  message: string,
+  type: ToastType = 'error'
+) {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(
+    new CustomEvent('globalToast', {
+      detail: { message, type },
+    })
+  );
 }

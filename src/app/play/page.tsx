@@ -27,6 +27,7 @@ import { pickBestSource } from '@/lib/source-prefer';
 import { processImageUrl } from '@/lib/utils';
 
 import EpisodeSelector from '@/components/EpisodeSelector';
+import { triggerGlobalToast } from '@/components/GlobalErrorIndicator';
 import PageLayout from '@/components/PageLayout';
 
 // 扩展 HTMLVideoElement 类型以支持 hls 属性
@@ -972,6 +973,15 @@ function PlayPageClient() {
         await deleteFavorite(currentSourceRef.current, currentIdRef.current);
         setFavorited(false);
       } else {
+        const already = await isFavorited(
+          currentSourceRef.current,
+          currentIdRef.current
+        );
+        if (already) {
+          setFavorited(true);
+          triggerGlobalToast('已经收藏', 'warning');
+          return;
+        }
         await saveFavorite(currentSourceRef.current, currentIdRef.current, {
           title: videoTitleRef.current,
           source_name: detailRef.current?.source_name || '',
@@ -982,6 +992,7 @@ function PlayPageClient() {
           search_title: searchTitle,
         });
         setFavorited(true);
+        triggerGlobalToast('收藏成功', 'success');
       }
     } catch (err) {
       console.error('切换收藏失败:', err);
