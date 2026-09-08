@@ -10,6 +10,8 @@ import { createPortal } from 'react-dom';
 import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
 import { checkForUpdates, CURRENT_VERSION, UpdateStatus } from '@/lib/version';
 
+import UserDataBackupButtons from './UserDataBackup';
+
 interface AuthInfo {
   username?: string;
   role?: 'owner' | 'admin' | 'user';
@@ -439,7 +441,7 @@ export const UserMenu: React.FC = () => {
       />
 
       {/* 设置面板 */}
-      <div className='fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white dark:bg-gray-900 rounded-xl shadow-xl z-[1001] p-6'>
+      <div className='fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 rounded-xl shadow-xl z-[1001] p-6'>
         {/* 标题栏 */}
         <div className='flex items-center justify-between mb-6'>
           <div className='flex items-center gap-3'>
@@ -613,6 +615,18 @@ export const UserMenu: React.FC = () => {
               onChange={(e) => handleImageProxyUrlChange(e.target.value)}
               disabled={!enableImageProxy}
             />
+          </div>
+
+          <div className='border-t border-gray-200 dark:border-gray-700'></div>
+
+          <div className='space-y-2'>
+            <h4 className='text-sm font-medium text-gray-700 dark:text-gray-300'>
+              观看数据备份
+            </h4>
+            <p className='text-xs text-gray-500 dark:text-gray-400'>
+              导出或导入当前账号的播放记录、进度和收藏夹
+            </p>
+            <UserDataBackupButtons />
           </div>
         </div>
 

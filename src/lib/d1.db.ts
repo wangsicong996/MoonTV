@@ -2,6 +2,7 @@
 
 import { AdminConfig } from './admin.types';
 import { Favorite, IStorage, PlayRecord, SkipConfig } from './types';
+import { splitStorageKey, UserDataBackup } from './userdata';
 
 // 搜索历史最大条数
 const SEARCH_HISTORY_LIMIT = 20;
@@ -582,6 +583,129 @@ export class D1Storage implements IStorage {
     } catch (err) {
       console.error('Failed to get all skip configs:', err);
       throw err;
+    }
+  }
+
+  async importUserBackup(
+    userName: string,
+    backup: UserDataBackup
+  ): Promise<void> {
+    const db = await this.getDatabase();
+    const statements: D1PreparedStatement[] = [];
+
+    for (const [key, record] of Object.entries(backup.playRecords)) {
+      statements.push(
+        db
+          .prepare(
+            `
+            INSERT OR REPLACE INTO play_records
+            (username, key, title, source_name, cover, year, index_episode, total_episodes, play_time, total_time, save_time, search_title)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `
+          )
+          .bind(
+            userName,
+            key,
+            record.title,
+            record.source_name,
+            record.cover,
+            record.year,
+            record.index,
+            record.total_episodes,
+            record.play_time,
+            record.total_time,
+            record.save_time,
+            record.search_title || null
+          )
+      );
+    }
+
+    for (const [key, favorite] of Object.entries(backup.favorites)) {
+      statements.push(
+        db
+          .prepare(
+            `
+            INSERT OR REPLACE INTO favorites
+            (username, key, title, source_name, cover, year, total_episodes, save_time)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          `
+          )
+          .bind(
+            userName,
+            key,
+            favorite.title,
+            favorite.source_name,
+            favorite.cover,
+            favorite.year,
+            favorite.total_episodes,
+            favorite.save_time
+          )
+      );
+    }
+
+    for (const [key, config] of Object.entries(backup.skipConfigs || {})) {
+      const parsed = splitStorageKey(key);
+      if (!parsed) continue;
+      statements.push(
+        db
+          .prepare(
+            `
+            INSERT OR REPLACE INTO skip_configs
+            (username, source, id_video, enable, intro_time, outro_time)
+            VALUES (?, ?, ?, ?, ?, ?)
+          `
+          )
+          .bind(
+            userName,
+            parsed.source,
+            parsed.id,
+            config.enable ? 1 : 0,
+            config.intro_time,
+            config.outro_time
+          )
+      );
+    }
+
+    const keywords = [...(backup.searchHistory || [])].reverse();
+    for (const keyword of keywords) {
+      statements.push(
+        db
+          .prepare(
+            'DELETE FROM search_history WHERE username = ? AND keyword = ?'
+          )
+          .bind(userName, keyword)
+      );
+      statements.push(
+        db
+          .prepare(
+            'INSERT INTO search_history (username, keyword) VALUES (?, ?)'
+          )
+          .bind(userName, keyword)
+      );
+    }
+
+    const chunkSize = 40;
+    if (statements.length > 0) {
+      for (let i = 0; i < statements.length; i += chunkSize) {
+        await db.batch(statements.slice(i, i + chunkSize));
+      }
+    }
+
+    if (keywords.length > 0) {
+      await db
+        .prepare(
+          `
+          DELETE FROM search_history
+          WHERE username = ? AND id NOT IN (
+            SELECT id FROM search_history
+            WHERE username = ?
+            ORDER BY created_at DESC
+            LIMIT ?
+          )
+        `
+        )
+        .bind(userName, userName, SEARCH_HISTORY_LIMIT)
+        .run();
     }
   }
 }

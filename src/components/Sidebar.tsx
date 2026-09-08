@@ -15,6 +15,7 @@ import {
 } from 'react';
 
 import { useSite } from './SiteProvider';
+import UserDataBackupButtons from './UserDataBackup';
 
 interface SidebarContextType {
   isCollapsed: boolean;
@@ -272,6 +273,10 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
                   );
                 })}
               </div>
+            </div>
+
+            <div className='px-2 pb-4 pt-2 border-t border-gray-200/50 dark:border-gray-700/50'>
+              <UserDataBackupButtons collapsed={isCollapsed} />
             </div>
           </div>
         </aside>

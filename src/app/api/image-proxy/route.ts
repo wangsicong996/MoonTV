@@ -2,6 +2,31 @@ import { NextResponse } from 'next/server';
 
 export const runtime = 'edge';
 
+function isSafeImageUrl(raw: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    return false;
+  }
+  const host = parsed.hostname.toLowerCase();
+  if (
+    host === 'localhost' ||
+    host.endsWith('.localhost') ||
+    host === '127.0.0.1' ||
+    host === '::1' ||
+    host === '0.0.0.0'
+  ) {
+    return false;
+  }
+  if (/^(10\.|192\.168\.|169\.254\.)/.test(host)) return false;
+  if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(host)) return false;
+  return true;
+}
+
 // OrionTV 兼容接口
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -11,12 +36,17 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Missing image URL' }, { status: 400 });
   }
 
+  if (!isSafeImageUrl(imageUrl)) {
+    return NextResponse.json({ error: 'Invalid image URL' }, { status: 400 });
+  }
+
   try {
     const imageResponse = await fetch(imageUrl, {
       headers: {
         Referer: 'https://movie.douban.com/',
         'User-Agent':
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+        Accept: 'image/webp,image/apng,image/*,*/*;q=0.8',
       },
     });
 

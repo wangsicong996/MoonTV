@@ -8,7 +8,24 @@ import { SearchResult } from '@/lib/types';
 
 export const runtime = 'edge';
 
+function isAuthorizedCron(request: NextRequest): boolean {
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) {
+    return true;
+  }
+
+  const authHeader = request.headers.get('authorization');
+  const bearer =
+    authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  const querySecret = request.nextUrl.searchParams.get('secret') || '';
+  return bearer === cronSecret || querySecret === cronSecret;
+}
+
 export async function GET(request: NextRequest) {
+  if (!isAuthorizedCron(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   console.log(request.url);
   try {
     console.log('Cron job triggered:', new Date().toISOString());

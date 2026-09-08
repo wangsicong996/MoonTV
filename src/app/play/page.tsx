@@ -1938,6 +1938,16 @@ function PlayPageClient() {
                     src={processImageUrl(videoCover)}
                     alt={videoTitle}
                     className='w-full h-full object-cover'
+                    referrerPolicy='no-referrer'
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      if (!target.dataset.proxied && videoCover) {
+                        target.dataset.proxied = '1';
+                        target.src = `/api/image-proxy?url=${encodeURIComponent(
+                          videoCover.replace(/^http:\/\//i, 'https://')
+                        )}`;
+                      }
+                    }}
                   />
                 ) : (
                   <span className='text-gray-600 dark:text-gray-400'>

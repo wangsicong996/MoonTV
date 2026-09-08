@@ -100,14 +100,22 @@ async function initConfig() {
         );
 
         apiSiteEntries.forEach(([key, site]) => {
-          sourceConfigMap.set(key, {
-            key,
-            name: site.name,
-            api: site.api,
-            detail: site.detail,
-            from: 'config',
-            disabled: false,
-          });
+          const existingSource = sourceConfigMap.get(key);
+          if (existingSource) {
+            existingSource.name = site.name;
+            existingSource.api = site.api;
+            existingSource.detail = site.detail;
+            existingSource.from = 'config';
+          } else {
+            sourceConfigMap.set(key, {
+              key,
+              name: site.name,
+              api: site.api,
+              detail: site.detail,
+              from: 'config',
+              disabled: false,
+            });
+          }
         });
 
         // 将 Map 转换回数组
@@ -132,13 +140,22 @@ async function initConfig() {
         );
 
         customCategories.forEach((category) => {
-          customCategoriesMap.set(category.query + category.type, {
-            name: category.name,
-            type: category.type,
-            query: category.query,
-            from: 'config',
-            disabled: false,
-          });
+          const catKey = category.query + category.type;
+          const existingCategory = customCategoriesMap.get(catKey);
+          if (existingCategory) {
+            existingCategory.name = category.name;
+            existingCategory.type = category.type;
+            existingCategory.query = category.query;
+            existingCategory.from = 'config';
+          } else {
+            customCategoriesMap.set(catKey, {
+              name: category.name,
+              type: category.type,
+              query: category.query,
+              from: 'config',
+              disabled: false,
+            });
+          }
         });
 
         // 检查现有 CustomCategories 是否在 fileConfig.custom_category 中，如果不在则标记为 custom
@@ -347,15 +364,37 @@ export async function getConfig(): Promise<AdminConfig> {
     // 将 Map 转换回数组
     adminConfig.SourceConfig = Array.from(sourceConfigMap.values());
 
-    // 覆盖 CustomCategories
     const customCategories = fileConfig.custom_category || [];
-    adminConfig.CustomCategories = customCategories.map((category) => ({
-      name: category.name,
-      type: category.type,
-      query: category.query,
-      from: 'config',
-      disabled: false,
-    }));
+    const customCategoriesMap = new Map(
+      (adminConfig.CustomCategories || []).map((c) => [c.query + c.type, c])
+    );
+    customCategories.forEach((category) => {
+      const catKey = category.query + category.type;
+      const existingCategory = customCategoriesMap.get(catKey);
+      if (existingCategory) {
+        existingCategory.name = category.name;
+        existingCategory.type = category.type;
+        existingCategory.query = category.query;
+        existingCategory.from = 'config';
+      } else {
+        customCategoriesMap.set(catKey, {
+          name: category.name,
+          type: category.type,
+          query: category.query,
+          from: 'config',
+          disabled: false,
+        });
+      }
+    });
+    const customCategoryKeys = new Set(
+      customCategories.map((c) => c.query + c.type)
+    );
+    customCategoriesMap.forEach((category) => {
+      if (!customCategoryKeys.has(category.query + category.type)) {
+        category.from = 'custom';
+      }
+    });
+    adminConfig.CustomCategories = Array.from(customCategoriesMap.values());
 
     const ownerUser = process.env.USERNAME || '';
     // 检查配置中的站长用户是否和 USERNAME 匹配，如果不匹配则降级为普通用户

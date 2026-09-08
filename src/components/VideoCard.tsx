@@ -14,7 +14,7 @@ import {
   subscribeToDataUpdates,
 } from '@/lib/db.client';
 import { SearchResult } from '@/lib/types';
-import { processImageUrl } from '@/lib/utils';
+import { getBuiltinImageProxyUrl, processImageUrl } from '@/lib/utils';
 
 import { ImagePlaceholder } from '@/components/ImagePlaceholder';
 
@@ -58,6 +58,7 @@ export default function VideoCard({
   const router = useRouter();
   const [favorited, setFavorited] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [posterSrc, setPosterSrc] = useState('');
 
   const isAggregate = from === 'search' && !!items?.length;
 
@@ -111,6 +112,11 @@ export default function VideoCard({
       ? 'movie'
       : 'tv'
     : type;
+
+  useEffect(() => {
+    setPosterSrc(processImageUrl(actualPoster));
+    setIsLoading(false);
+  }, [actualPoster]);
 
   // 获取收藏状态
   useEffect(() => {
@@ -277,14 +283,31 @@ export default function VideoCard({
         {/* 骨架屏 */}
         {!isLoading && <ImagePlaceholder aspectRatio='aspect-[2/3]' />}
         {/* 图片 */}
-        <Image
-          src={processImageUrl(actualPoster)}
-          alt={actualTitle}
-          fill
-          className='object-cover'
-          referrerPolicy='no-referrer'
-          onLoadingComplete={() => setIsLoading(true)}
-        />
+        {actualPoster ? (
+          <Image
+            src={posterSrc || processImageUrl(actualPoster)}
+            alt={actualTitle}
+            fill
+            unoptimized
+            className='object-cover'
+            referrerPolicy='no-referrer'
+            onLoadingComplete={() => setIsLoading(true)}
+            onError={() => {
+              const currentSrc = posterSrc || processImageUrl(actualPoster);
+              const proxySrc = getBuiltinImageProxyUrl(actualPoster);
+              if (!currentSrc.includes('/api/image-proxy')) {
+                setPosterSrc(proxySrc);
+                return;
+              }
+              const directSrc = actualPoster.replace(/^http:\/\//i, 'https://');
+              if (currentSrc !== directSrc) {
+                setPosterSrc(directSrc);
+                return;
+              }
+              setIsLoading(true);
+            }}
+          />
+        ) : null}
 
         {/* 悬浮遮罩 */}
         <div className='absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 transition-opacity duration-300 ease-in-out group-hover:opacity-100' />

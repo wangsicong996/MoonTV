@@ -1,5 +1,16 @@
 import { NextRequest } from 'next/server';
 
+/** PWA 需读 cookie，故 httpOnly 为 false；pages.dev 始终 HTTPS，强制 Secure */
+export function getAuthCookieOptions(expires?: Date) {
+  return {
+    path: '/',
+    expires,
+    sameSite: 'lax' as const,
+    httpOnly: false,
+    secure: true,
+  };
+}
+
 // 从cookie获取认证信息 (服务端使用)
 export function getAuthInfoFromCookie(request: NextRequest): {
   password?: string;

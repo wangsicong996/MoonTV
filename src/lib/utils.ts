@@ -28,16 +28,37 @@ export function getImageProxyUrl(): string | null {
     : null;
 }
 
+function normalizeImageUrl(originalUrl: string): string {
+  return originalUrl.replace(/^http:\/\//i, 'https://');
+}
+
+function isDoubanImage(url: string): boolean {
+  return /doubanio\.com|douban\.com/i.test(url);
+}
+
+export function getBuiltinImageProxyUrl(originalUrl: string): string {
+  return `/api/image-proxy?url=${encodeURIComponent(
+    normalizeImageUrl(originalUrl)
+  )}`;
+}
+
 /**
- * 处理图片 URL，如果设置了图片代理则使用代理
+ * 处理图片 URL。自定义代理优先；豆瓣图默认走同源代理，避免防盗链和跨网访问失败。
  */
 export function processImageUrl(originalUrl: string): string {
   if (!originalUrl) return originalUrl;
 
+  const normalized = normalizeImageUrl(originalUrl);
   const proxyUrl = getImageProxyUrl();
-  if (!proxyUrl) return originalUrl;
+  if (proxyUrl) {
+    return `${proxyUrl}${encodeURIComponent(normalized)}`;
+  }
 
-  return `${proxyUrl}${encodeURIComponent(originalUrl)}`;
+  if (isDoubanImage(normalized)) {
+    return getBuiltinImageProxyUrl(normalized);
+  }
+
+  return normalized;
 }
 
 /**

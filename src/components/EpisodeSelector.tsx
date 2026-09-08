@@ -495,8 +495,16 @@ const EpisodeSelector: React.FC<EpisodeSelectorProps> = ({
                               src={processImageUrl(source.poster)}
                               alt={source.title}
                               className='w-full h-full object-cover'
+                              referrerPolicy='no-referrer'
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement;
+                                if (!target.dataset.proxied && source.poster) {
+                                  target.dataset.proxied = '1';
+                                  target.src = `/api/image-proxy?url=${encodeURIComponent(
+                                    source.poster.replace(/^http:\/\//i, 'https://')
+                                  )}`;
+                                  return;
+                                }
                                 target.style.display = 'none';
                               }}
                             />
