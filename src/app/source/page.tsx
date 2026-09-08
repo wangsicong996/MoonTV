@@ -137,8 +137,7 @@ function SourcePageClient() {
     return () => observer.disconnect();
   }, [hasMore, loading, isLoadingMore, fetchCatalog, page]);
 
-  const topClasses = classes.filter((item) => !item.type_pid);
-  const visibleClasses = topClasses.length > 0 ? topClasses : classes;
+  const visibleClasses = classes.filter((item) => item.type_name);
 
   const buildHref = (nextType?: number) => {
     const params = new URLSearchParams({ key });
@@ -161,6 +160,9 @@ function SourcePageClient() {
                 ? visibleClasses.find((c) => String(c.type_id) === typeId)
                     ?.type_name || '分类内容'
                 : '该源首页最新内容'}
+              <span className='ml-2 text-xs text-gray-400 dark:text-gray-500'>
+                分类来自该源 CMS
+              </span>
             </p>
           </div>
 

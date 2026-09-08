@@ -35,6 +35,7 @@ import Swal from 'sweetalert2';
 
 import { AdminConfig, AdminConfigResult } from '@/lib/admin.types';
 import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
+import { invalidateNavSources } from '@/lib/nav-sources.client';
 
 import PageLayout from '@/components/PageLayout';
 
@@ -719,8 +720,9 @@ const VideoSourceConfig = ({
         throw new Error(data.error || `操作失败: ${resp.status}`);
       }
 
-      // 成功后刷新配置
+      // 成功后刷新配置，并立刻同步左侧栏视频源
       await refreshConfig();
+      invalidateNavSources();
     } catch (err) {
       showError(err instanceof Error ? err.message : '操作失败');
       throw err; // 向上抛出方便调用处判断

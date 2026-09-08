@@ -14,6 +14,8 @@ import {
   useState,
 } from 'react';
 
+import { subscribeNavSources } from '@/lib/nav-sources.client';
+
 import BrandLogo from './BrandLogo';
 import UserDataBackupButtons from './UserDataBackup';
 
@@ -152,16 +154,7 @@ const Sidebar = ({ onToggle, activePath = '/' }: SidebarProps) => {
   }, []);
 
   useEffect(() => {
-    fetch('/api/nav-sources')
-      .then((resp) => (resp.ok ? resp.json() : { sources: [] }))
-      .then((data) => {
-        if (Array.isArray(data?.sources)) {
-          setSidebarSources(data.sources);
-        }
-      })
-      .catch(() => {
-        setSidebarSources([]);
-      });
+    return subscribeNavSources(setSidebarSources);
   }, []);
 
   return (

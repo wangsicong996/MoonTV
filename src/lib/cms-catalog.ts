@@ -62,11 +62,29 @@ function parseEpisodeCount(remarks?: string): number | undefined {
 function normalizeClass(raw: any[]): CmsClass[] {
   return raw
     .map((item) => ({
-      type_id: Number(item?.type_id),
-      type_name: String(item?.type_name || '').trim(),
+      type_id: Number(item?.type_id ?? item?.id),
+      type_name: String(item?.type_name || item?.name || '')
+        .replace(/<[^>]+>/g, '')
+        .replace(/&nbsp;/gi, ' ')
+        .trim(),
       type_pid: Number(item?.type_pid || 0),
     }))
-    .filter((item) => Number.isFinite(item.type_id) && item.type_name);
+    .filter(
+      (item) =>
+        Number.isFinite(item.type_id) &&
+        item.type_id > 0 &&
+        item.type_name.length > 0
+    );
+}
+
+/** 有父子分类时只保留叶子分类，避免点父类空白 */
+export function pickVisibleCatalogClasses(classes: CmsClass[]): CmsClass[] {
+  const named = classes.filter((item) => item.type_name);
+  const parentIds = new Set(
+    named.map((item) => item.type_pid).filter((id) => id > 0)
+  );
+  if (parentIds.size === 0) return named;
+  return named.filter((item) => !parentIds.has(item.type_id));
 }
 
 function normalizeList(raw: any[]): CmsVideo[] {
@@ -96,16 +114,26 @@ export async function fetchSourceCatalog(
   options: { t?: string; pg?: number } = {}
 ): Promise<CmsCatalogResult> {
   const pg = Math.max(1, options.pg || 1);
-  const params: Record<string, string> = {
-    ac: 'videolist',
-    pg: String(pg),
-  };
-  if (options.t) params.t = options.t;
+  const common: Record<string, string> = { pg: String(pg) };
+  if (options.t) common.t = options.t;
 
-  let data = await fetchJson(buildCmsUrl(apiSite.api, params));
-  if (!data || !Array.isArray(data.list)) {
-    params.ac = 'list';
-    data = await fetchJson(buildCmsUrl(apiSite.api, params));
+  // 列表页用 ac=list，体积远小于 videolist（不含每集播放地址）
+  let data = await fetchJson(buildCmsUrl(apiSite.api, { ...common, ac: 'list' }));
+  const list = Array.isArray(data?.list) ? data.list : [];
+  const missingPoster =
+    list.length > 0 &&
+    list.filter((item: any) => !item?.vod_pic).length >= list.length * 0.6;
+
+  if (!data || !Array.isArray(data.list) || missingPoster) {
+    const videoData = await fetchJson(
+      buildCmsUrl(apiSite.api, { ...common, ac: 'videolist' })
+    );
+    if (videoData && Array.isArray(videoData.list)) {
+      if (!Array.isArray(videoData.class) && Array.isArray(data?.class)) {
+        videoData.class = data.class;
+      }
+      data = videoData;
+    }
   }
 
   let rawClass = Array.isArray(data?.class)
@@ -115,7 +143,7 @@ export async function fetchSourceCatalog(
     : [];
   const rawList = Array.isArray(data?.list) ? data.list : [];
 
-  if (rawClass.length === 0) {
+  if (rawClass.length === 0 && pg === 1) {
     const classData = await fetchJson(
       buildCmsUrl(apiSite.api, { ac: 'list', pg: '1' })
     );
@@ -128,7 +156,7 @@ export async function fetchSourceCatalog(
 
   return {
     source: { key: apiSite.key, name: apiSite.name },
-    class: normalizeClass(rawClass),
+    class: pickVisibleCatalogClasses(normalizeClass(rawClass)),
     list: normalizeList(rawList),
     page: Number(data?.page) || pg,
     pagecount: Math.max(1, Number(data?.pagecount) || 1),

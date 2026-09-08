@@ -120,6 +120,7 @@ function shouldSkipAuth(pathname: string): boolean {
   const skipPaths = [
     '/_next',
     '/favicon.ico',
+    '/suntv.ico',
     '/robots.txt',
     '/manifest.json',
     '/icons/',
@@ -136,6 +137,6 @@ function shouldSkipAuth(pathname: string): boolean {
 // 配置middleware匹配规则
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|login|warning|share|api/login|api/register|api/logout|api/cron|api/server-config|api/image-proxy|api/share|api/vod).*)',
+    '/((?!_next/static|_next/image|favicon.ico|suntv.ico|login|warning|share|api/login|api/register|api/logout|api/cron|api/server-config|api/image-proxy|api/share|api/vod).*)',
   ],
 };

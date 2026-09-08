@@ -17,7 +17,7 @@ const inter = Inter({ subsets: ['latin'] });
 
 // 动态生成 metadata，支持配置更新后的标题变化
 export async function generateMetadata(): Promise<Metadata> {
-  let siteName = process.env.SITE_NAME || 'suntv';
+  let siteName = process.env.SITE_NAME || 'SunTV';
   if (
     process.env.NEXT_PUBLIC_STORAGE_TYPE !== 'd1' &&
     process.env.NEXT_PUBLIC_STORAGE_TYPE !== 'upstash'
@@ -31,9 +31,16 @@ export async function generateMetadata(): Promise<Metadata> {
     description: '影视聚合',
     manifest: '/manifest.json',
     icons: {
-      icon: [{ url: '/favicon.ico', type: 'image/x-icon', sizes: '32x32' }],
-      shortcut: '/favicon.ico',
-      apple: '/icons/icon-192x192.png',
+      icon: [
+        { url: '/suntv.ico', type: 'image/x-icon' },
+        {
+          url: '/icons/icon-192x192.png?v=suntv2',
+          type: 'image/png',
+          sizes: '192x192',
+        },
+      ],
+      shortcut: '/suntv.ico',
+      apple: '/icons/icon-192x192.png?v=suntv2',
     },
   };
 }
@@ -48,7 +55,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  let siteName = process.env.SITE_NAME || 'suntv';
+  let siteName = process.env.SITE_NAME || 'SunTV';
   let announcement =
     process.env.ANNOUNCEMENT ||
     '本网站仅提供影视信息搜索服务，所有内容均来自第三方网站。本站不存储任何视频资源，不对任何内容的准确性、合法性、完整性负责。';
@@ -99,6 +106,12 @@ export default async function RootLayout({
         <meta
           name='viewport'
           content='width=device-width, initial-scale=1.0, viewport-fit=cover'
+        />
+        <link rel='icon' href='/suntv.ico' type='image/x-icon' />
+        <link rel='shortcut icon' href='/suntv.ico' type='image/x-icon' />
+        <link
+          rel='apple-touch-icon'
+          href='/icons/icon-192x192.png?v=suntv2'
         />
         {/* 将配置序列化后直接写入脚本，浏览器端可通过 window.RUNTIME_CONFIG 获取 */}
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}

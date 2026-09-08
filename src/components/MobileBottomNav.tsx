@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { subscribeNavSources } from '@/lib/nav-sources.client';
+
 interface MobileBottomNavProps {
   /**
    * 主动指定当前激活的路径。当未提供时，自动使用 usePathname() 获取的路径。
@@ -56,25 +58,19 @@ const MobileBottomNav = ({ activePath }: MobileBottomNavProps) => {
       ]);
     }
 
-    fetch('/api/nav-sources')
-      .then((resp) => (resp.ok ? resp.json() : { sources: [] }))
-      .then((data) => {
-        if (!Array.isArray(data?.sources) || data.sources.length === 0) return;
-        setNavItems((prevItems) => {
-          const existing = new Set(prevItems.map((item) => item.href));
-          const extras = data.sources
-            .map((source: { key: string; name: string }) => ({
-              icon: Radio,
-              label: source.name,
-              href: `/source?key=${encodeURIComponent(source.key)}`,
-            }))
-            .filter((item: { href: string }) => !existing.has(item.href));
-          return extras.length ? [...prevItems, ...extras] : prevItems;
-        });
-      })
-      .catch(() => {
-        // ignore
+    return subscribeNavSources((sources) => {
+      setNavItems((prevItems) => {
+        const base = prevItems.filter(
+          (item) => !item.href.startsWith('/source?')
+        );
+        const extras = sources.map((source) => ({
+          icon: Radio,
+          label: source.name,
+          href: `/source?key=${encodeURIComponent(source.key)}`,
+        }));
+        return extras.length ? [...base, ...extras] : base;
       });
+    });
   }, []);
 
   const isActive = (href: string) => {

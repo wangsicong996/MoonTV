@@ -11,7 +11,7 @@ const publicDir = path.join(projectRoot, 'public');
 const manifestPath = path.join(publicDir, 'manifest.json');
 
 // 从环境变量获取站点名称
-const siteName = process.env.SITE_NAME || 'suntv';
+const siteName = process.env.SITE_NAME || 'SunTV';
 
 // manifest.json 模板
 const manifestTemplate = {
@@ -26,22 +26,22 @@ const manifestTemplate = {
   "apple-mobile-web-app-status-bar-style": "black",
   "icons": [
     {
-      "src": "/icons/icon-192x192.png",
+      "src": "/icons/icon-192x192.png?v=suntv2",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/icons/icon-256x256.png",
+      "src": "/icons/icon-256x256.png?v=suntv2",
       "sizes": "256x256",
       "type": "image/png"
     },
     {
-      "src": "/icons/icon-384x384.png",
+      "src": "/icons/icon-384x384.png?v=suntv2",
       "sizes": "384x384",
       "type": "image/png"
     },
     {
-      "src": "/icons/icon-512x512.png",
+      "src": "/icons/icon-512x512.png?v=suntv2",
       "sizes": "512x512",
       "type": "image/png"
     }
