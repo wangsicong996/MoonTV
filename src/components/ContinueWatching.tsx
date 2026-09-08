@@ -2,6 +2,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Swal from 'sweetalert2';
 
 import type { PlayRecord } from '@/lib/db.client';
 import {
@@ -10,7 +11,7 @@ import {
   subscribeToDataUpdates,
 } from '@/lib/db.client';
 
-import ScrollableRow from '@/components/ScrollableRow';
+import DoubanCardSkeleton from '@/components/DoubanCardSkeleton';
 import VideoCard from '@/components/VideoCard';
 
 interface ContinueWatchingProps {
@@ -23,15 +24,12 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
   >([]);
   const [loading, setLoading] = useState(true);
 
-  // 处理播放记录数据更新的函数
   const updatePlayRecords = (allRecords: Record<string, PlayRecord>) => {
-    // 将记录转换为数组并根据 save_time 由近到远排序
     const recordsArray = Object.entries(allRecords).map(([key, record]) => ({
       ...record,
       key,
     }));
 
-    // 按 save_time 降序排序（最新的在前面）
     const sortedRecords = recordsArray.sort(
       (a, b) => b.save_time - a.save_time
     );
@@ -43,8 +41,6 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
     const fetchPlayRecords = async () => {
       try {
         setLoading(true);
-
-        // 从缓存或API获取所有播放记录
         const allRecords = await getAllPlayRecords();
         updatePlayRecords(allRecords);
       } catch (error) {
@@ -57,7 +53,6 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
 
     fetchPlayRecords();
 
-    // 监听播放记录更新事件
     const unsubscribe = subscribeToDataUpdates(
       'playRecordsUpdated',
       (newRecords: Record<string, PlayRecord>) => {
@@ -68,21 +63,29 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
     return unsubscribe;
   }, []);
 
-  // 如果没有播放记录，则不渲染组件
-  if (!loading && playRecords.length === 0) {
-    return null;
-  }
-
-  // 计算播放进度百分比
   const getProgress = (record: PlayRecord) => {
     if (record.total_time === 0) return 0;
     return (record.play_time / record.total_time) * 100;
   };
 
-  // 从 key 中解析 source 和 id
   const parseKey = (key: string) => {
     const [source, id] = key.split('+');
     return { source, id };
+  };
+
+  const handleClear = async () => {
+    const { isConfirmed } = await Swal.fire({
+      title: '清空继续观看？',
+      text: '将删除全部播放记录，此操作不可恢复。',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: '确认清空',
+      cancelButtonText: '取消',
+      confirmButtonColor: '#dc2626',
+    });
+    if (!isConfirmed) return;
+    await clearAllPlayRecords();
+    setPlayRecords([]);
   };
 
   return (
@@ -94,38 +97,21 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
         {!loading && playRecords.length > 0 && (
           <button
             className='text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
-            onClick={async () => {
-              await clearAllPlayRecords();
-              setPlayRecords([]);
-            }}
+            onClick={handleClear}
           >
             清空
           </button>
         )}
       </div>
-      <ScrollableRow>
+      <div className='justify-start grid grid-cols-3 gap-x-2 gap-y-14 sm:gap-y-20 px-0 sm:px-2 sm:grid-cols-[repeat(auto-fill,_minmax(11rem,_1fr))] sm:gap-x-8'>
         {loading
-          ? // 加载状态显示灰色占位数据
-            Array.from({ length: 6 }).map((_, index) => (
-              <div
-                key={index}
-                className='min-w-[96px] w-24 sm:min-w-[180px] sm:w-44'
-              >
-                <div className='relative aspect-[2/3] w-full overflow-hidden rounded-lg bg-gray-200 animate-pulse dark:bg-gray-800'>
-                  <div className='absolute inset-0 bg-gray-300 dark:bg-gray-700'></div>
-                </div>
-                <div className='mt-2 h-4 bg-gray-200 rounded animate-pulse dark:bg-gray-800'></div>
-                <div className='mt-1 h-3 bg-gray-200 rounded animate-pulse dark:bg-gray-800'></div>
-              </div>
+          ? Array.from({ length: 12 }).map((_, index) => (
+              <DoubanCardSkeleton key={index} />
             ))
-          : // 显示真实数据
-            playRecords.map((record) => {
+          : playRecords.map((record) => {
               const { source, id } = parseKey(record.key);
               return (
-                <div
-                  key={record.key}
-                  className='min-w-[96px] w-24 sm:min-w-[180px] sm:w-44'
-                >
+                <div key={record.key} className='w-full'>
                   <VideoCard
                     id={id}
                     title={record.title}
@@ -148,7 +134,12 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
                 </div>
               );
             })}
-      </ScrollableRow>
+        {!loading && playRecords.length === 0 && (
+          <div className='col-span-full text-center text-gray-500 py-8 dark:text-gray-400'>
+            暂无继续观看
+          </div>
+        )}
+      </div>
     </section>
   );
 }

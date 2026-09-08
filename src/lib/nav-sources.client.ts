@@ -23,9 +23,12 @@ export async function fetchNavSources(force = false): Promise<NavSource[]> {
   inflight = fetch('/api/nav-sources')
     .then((resp) => (resp.ok ? resp.json() : { sources: [] }))
     .then((data) => {
-      memory = Array.isArray(data?.sources) ? data.sources : [];
-      emit(memory);
-      return memory;
+      const sources: NavSource[] = Array.isArray(data?.sources)
+        ? data.sources
+        : [];
+      memory = sources;
+      emit(sources);
+      return sources;
     })
     .catch(() => memory || [])
     .finally(() => {

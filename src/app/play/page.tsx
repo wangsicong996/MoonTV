@@ -7,6 +7,7 @@ import Hls from 'hls.js';
 import { Copy, Heart } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useRef, useState } from 'react';
+import Swal from 'sweetalert2';
 
 import {
   deleteFavorite,
@@ -956,11 +957,21 @@ function PlayPageClient() {
 
     try {
       if (favorited) {
-        // 如果已收藏，删除收藏
         await deleteFavorite(currentSourceRef.current, currentIdRef.current);
         setFavorited(false);
       } else {
-        // 如果未收藏，添加收藏
+        const { isConfirmed } = await Swal.fire({
+          title: '加入收藏？',
+          text: videoTitleRef.current
+            ? `收藏「${videoTitleRef.current}」`
+            : '确定加入收藏夹？',
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonText: '收藏',
+          cancelButtonText: '取消',
+          confirmButtonColor: '#16a34a',
+        });
+        if (!isConfirmed) return;
         await saveFavorite(currentSourceRef.current, currentIdRef.current, {
           title: videoTitleRef.current,
           source_name: detailRef.current?.source_name || '',

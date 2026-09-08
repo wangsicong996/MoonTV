@@ -4,6 +4,7 @@ import { CheckCircle, Heart, Link, PlayCircleIcon } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import Swal from 'sweetalert2';
 
 import {
   deleteFavorite,
@@ -154,11 +155,19 @@ export default function VideoCard({
       if (from === 'douban' || !actualSource || !actualId) return;
       try {
         if (favorited) {
-          // 如果已收藏，删除收藏
           await deleteFavorite(actualSource, actualId);
           setFavorited(false);
         } else {
-          // 如果未收藏，添加收藏
+          const { isConfirmed } = await Swal.fire({
+            title: '加入收藏？',
+            text: actualTitle ? `收藏「${actualTitle}」` : '确定加入收藏夹？',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: '收藏',
+            cancelButtonText: '取消',
+            confirmButtonColor: '#16a34a',
+          });
+          if (!isConfirmed) return;
           await saveFavorite(actualSource, actualId, {
             title: actualTitle,
             source_name: source_name || '',
