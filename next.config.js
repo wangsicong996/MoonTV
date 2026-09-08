@@ -12,6 +12,14 @@ const nextConfig = {
   async rewrites() {
     return [
       {
+        source: '/api.php/provide/vod',
+        destination: '/api/vod',
+      },
+      {
+        source: '/api.php/provide/vod/',
+        destination: '/api/vod',
+      },
+      {
         source: '/api.php/provide/vod/:token/at/json',
         destination: '/api/vod/:token',
       },

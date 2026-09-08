@@ -625,7 +625,7 @@ export const UserMenu: React.FC = () => {
               VOD 订阅（收藏夹）
             </h4>
             <p className='text-xs text-gray-500 dark:text-gray-400'>
-              把地址填进 TVBox、CatVod 等苹果 CMS 播放器，首页会显示当前账号收藏，点开后拉取对应源的 m3u8 和集数。
+              复制后填到播放器资源站，路径必须是 /api.php/provide/vod。首页是收藏列表，点开某部才会去拉每集 m3u8。
             </p>
             <VodSubscribe />
           </div>

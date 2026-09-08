@@ -7,7 +7,6 @@ import { useEffect, useState } from 'react';
 
 interface VodSubscribeInfo {
   api: string;
-  cmsApi: string;
   tvbox: {
     key: string;
     name: string;
@@ -106,72 +105,26 @@ export default function VodSubscribe() {
 
       {info && (
         <>
-          <div className='space-y-1'>
-            <p className='text-xs text-gray-500 dark:text-gray-400'>
-              苹果 CMS 接口，填到 TVBox / CatVod 等的 type=1 订阅
-            </p>
-            <div className='flex gap-2'>
-              <input
-                readOnly
-                value={info.api}
-                className='flex-1 min-w-0 px-2 py-1.5 text-xs rounded border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100'
-              />
-              <button
-                type='button'
-                onClick={() => void handleCopy(info.api, 'api')}
-                className='shrink-0 px-2 py-1.5 text-xs rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800'
-              >
-                {copied === 'api' ? (
-                  <Check className='w-4 h-4 text-green-500' />
-                ) : (
-                  <Copy className='w-4 h-4' />
-                )}
-              </button>
-            </div>
-          </div>
-          <div className='space-y-1'>
-            <p className='text-xs text-gray-500 dark:text-gray-400'>
-              兼容路径（部分播放器认 /api.php/provide/vod/）
-            </p>
-            <div className='flex gap-2'>
-              <input
-                readOnly
-                value={info.cmsApi}
-                className='flex-1 min-w-0 px-2 py-1.5 text-xs rounded border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100'
-              />
-              <button
-                type='button'
-                onClick={() => void handleCopy(info.cmsApi, 'cms')}
-                className='shrink-0 px-2 py-1.5 text-xs rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800'
-              >
-                {copied === 'cms' ? (
-                  <Check className='w-4 h-4 text-green-500' />
-                ) : (
-                  <Copy className='w-4 h-4' />
-                )}
-              </button>
-            </div>
-          </div>
-          <div className='space-y-1'>
-            <p className='text-xs text-gray-500 dark:text-gray-400'>TVBox 站点配置</p>
-            <div className='flex gap-2 items-start'>
-              <pre className='flex-1 min-w-0 px-2 py-1.5 text-[11px] leading-5 rounded border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100 overflow-x-auto'>
-                {JSON.stringify(info.tvbox, null, 2)}
-              </pre>
-              <button
-                type='button'
-                onClick={() =>
-                  void handleCopy(JSON.stringify(info.tvbox, null, 2), 'tvbox')
-                }
-                className='shrink-0 px-2 py-1.5 text-xs rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800'
-              >
-                {copied === 'tvbox' ? (
-                  <Check className='w-4 h-4 text-green-500' />
-                ) : (
-                  <Copy className='w-4 h-4' />
-                )}
-              </button>
-            </div>
+          <p className='text-xs text-gray-500 dark:text-gray-400'>
+            填这个地址，格式和黑木耳 / 如意资源一样。播放器会自己追加 ?ac=list、?ac=videolist&ids=
+          </p>
+          <div className='flex gap-2'>
+            <input
+              readOnly
+              value={info.api}
+              className='flex-1 min-w-0 px-2 py-1.5 text-xs rounded border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100'
+            />
+            <button
+              type='button'
+              onClick={() => void handleCopy(info.api, 'api')}
+              className='shrink-0 px-2 py-1.5 text-xs rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800'
+            >
+              {copied === 'api' ? (
+                <Check className='w-4 h-4 text-green-500' />
+              ) : (
+                <Copy className='w-4 h-4' />
+              )}
+            </button>
           </div>
         </>
       )}

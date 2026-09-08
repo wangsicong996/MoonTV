@@ -43,12 +43,11 @@ export async function GET(request: NextRequest) {
 
     const token = await createVodToken(username, secret);
     const origin = getOrigin(request);
-    const api = `${origin}/api/vod/${token}`;
-    const cmsApi = `${origin}/api.php/provide/vod/${token}`;
+    const api = `${origin}/api.php/provide/vod`;
 
     return NextResponse.json({
       api,
-      cmsApi,
+      token,
       tvbox: {
         key: 'suntv_fav',
         name: 'suntv收藏',

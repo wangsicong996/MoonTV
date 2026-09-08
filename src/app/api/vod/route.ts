@@ -9,9 +9,6 @@ export function OPTIONS() {
   return vodCmsOptions();
 }
 
-export function GET(
-  request: NextRequest,
-  { params }: { params: { token: string } }
-) {
-  return handleVodCms(request, params.token);
+export function GET(request: NextRequest) {
+  return handleVodCms(request);
 }
