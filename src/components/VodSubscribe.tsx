@@ -2,8 +2,13 @@
 
 'use client';
 
-import { Check, Copy, Loader2 } from 'lucide-react';
+import { Check, Copy, Loader2, RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
+
+import {
+  OptimizeItemResult,
+  optimizeFavoriteSources,
+} from '@/lib/vod-optimize';
 
 interface VodSubscribeInfo {
   api: string;
@@ -36,12 +41,23 @@ async function copyText(value: string) {
   }
 }
 
+function summarize(results: OptimizeItemResult[]): string {
+  const updated = results.filter((item) => item.status === 'updated').length;
+  const unchanged = results.filter((item) => item.status === 'unchanged').length;
+  const skipped = results.filter((item) => item.status === 'skipped').length;
+  const failed = results.filter((item) => item.status === 'failed').length;
+  return `更新 ${updated} · 已是最优 ${unchanged} · 不通跳过 ${skipped} · 失败 ${failed}`;
+}
+
 export default function VodSubscribe() {
   const [storageType, setStorageType] = useState('localstorage');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [info, setInfo] = useState<VodSubscribeInfo | null>(null);
   const [copied, setCopied] = useState('');
+  const [optimizing, setOptimizing] = useState(false);
+  const [optimizeProgress, setOptimizeProgress] = useState('');
+  const [optimizeSummary, setOptimizeSummary] = useState('');
 
   useEffect(() => {
     setStorageType(getStorageType());
@@ -71,17 +87,36 @@ export default function VodSubscribe() {
     window.setTimeout(() => setCopied(''), 2000);
   };
 
-  if (storageType === 'localstorage') {
-    return (
-      <p className='text-xs text-gray-500 dark:text-gray-400'>
-        当前是本地收藏模式，其他播放器读不到。部署 Redis / D1 / Upstash 后即可生成订阅地址。
-      </p>
-    );
-  }
+  const handleOptimize = async () => {
+    if (optimizing) return;
+    setOptimizing(true);
+    setOptimizeSummary('');
+    setOptimizeProgress('正在读取收藏夹...');
+    try {
+      const results = await optimizeFavoriteSources((current, total, title) => {
+        setOptimizeProgress(`正在测速 ${current}/${total}：${title}`);
+      });
+      setOptimizeProgress('');
+      setOptimizeSummary(summarize(results));
+    } catch (err) {
+      setOptimizeProgress('');
+      setOptimizeSummary(err instanceof Error ? err.message : '更新失败');
+    } finally {
+      setOptimizing(false);
+    }
+  };
+
+  const subscribeBlocked = storageType === 'localstorage';
 
   return (
     <div className='space-y-3'>
-      {!info && (
+      {subscribeBlocked && (
+        <p className='text-xs text-gray-500 dark:text-gray-400'>
+          当前是本地收藏模式，其他播放器读不到订阅。仍可在本机测速后改收藏线路。部署 Redis / D1 / Upstash 后即可生成订阅地址。
+        </p>
+      )}
+
+      {!subscribeBlocked && !info && (
         <button
           type='button'
           onClick={() => void load()}
@@ -128,6 +163,35 @@ export default function VodSubscribe() {
           </div>
         </>
       )}
+
+      <div className='pt-1 space-y-2'>
+        <p className='text-xs text-gray-500 dark:text-gray-400'>
+          在当前网络下，按播放页换源 tab 同一套 ping/测速，给每部收藏挑最优线路，并改写收藏和 VOD 的 m3u8。全部不通则跳过。请在和 VOD 播放器同一网络下点。
+        </p>
+        <button
+          type='button'
+          onClick={() => void handleOptimize()}
+          disabled={optimizing}
+          className='inline-flex items-center gap-2 rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-60'
+        >
+          {optimizing ? (
+            <Loader2 className='w-4 h-4 animate-spin' />
+          ) : (
+            <RefreshCw className='w-4 h-4' />
+          )}
+          更新 VOD 线路
+        </button>
+        {optimizeProgress && (
+          <p className='text-xs text-gray-500 dark:text-gray-400'>
+            {optimizeProgress}
+          </p>
+        )}
+        {optimizeSummary && (
+          <p className='text-xs text-gray-600 dark:text-gray-300'>
+            {optimizeSummary}
+          </p>
+        )}
+      </div>
     </div>
   );
 }
