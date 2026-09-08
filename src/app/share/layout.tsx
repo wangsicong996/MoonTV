@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Script from 'next/script';
 
 export const metadata: Metadata = {
   title: 'suntv 分享播放',
@@ -10,5 +11,10 @@ export default function ShareLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  return (
+    <>
+      <Script src='/tanghulu-share.js' strategy='afterInteractive' />
+      {children}
+    </>
+  );
 }

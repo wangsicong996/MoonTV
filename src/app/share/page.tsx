@@ -7,6 +7,40 @@ import { useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 
 const SEEK_SECONDS = 10;
+const KEY_COOLDOWN_MS = 160;
+
+const KEY_ALIAS: Record<string, string> = {
+  ArrowLeft: 'ArrowLeft',
+  ArrowRight: 'ArrowRight',
+  ArrowUp: 'ArrowUp',
+  ArrowDown: 'ArrowDown',
+  Left: 'ArrowLeft',
+  Right: 'ArrowRight',
+  Up: 'ArrowUp',
+  Down: 'ArrowDown',
+  LeftArrow: 'ArrowLeft',
+  RightArrow: 'ArrowRight',
+  UpArrow: 'ArrowUp',
+  DownArrow: 'ArrowDown',
+  Enter: 'Enter',
+  NumpadEnter: 'Enter',
+  ' ': ' ',
+  Spacebar: ' ',
+  Escape: 'Escape',
+  Esc: 'Escape',
+  Backspace: 'Escape',
+};
+
+const KEY_CODE_ALIAS: Record<number, string> = {
+  37: 'ArrowLeft',
+  38: 'ArrowUp',
+  39: 'ArrowRight',
+  40: 'ArrowDown',
+  13: 'Enter',
+  32: ' ',
+  27: 'Escape',
+  8: 'Escape',
+};
 
 interface ShareDetail {
   title: string;
@@ -18,6 +52,22 @@ interface ShareDetail {
   expiresAt: number;
 }
 
+declare global {
+  interface Window {
+    __suntvTanghuluShare?: boolean;
+    __suntvDpadLock?: number;
+    __suntvShareRemote?: { overlayOpen: boolean };
+  }
+}
+
+function normalizeKey(event: KeyboardEvent): string {
+  if (event.key && KEY_ALIAS[event.key]) return KEY_ALIAS[event.key];
+  if (event.code && KEY_ALIAS[event.code]) return KEY_ALIAS[event.code];
+  const code = event.keyCode || event.which;
+  if (code && KEY_CODE_ALIAS[code]) return KEY_CODE_ALIAS[code];
+  return event.key || '';
+}
+
 function SharePlayClient() {
   const searchParams = useSearchParams();
   const token = searchParams.get('t') || '';
@@ -27,6 +77,8 @@ function SharePlayClient() {
   const overlayOpenRef = useRef(false);
   const playingIndexRef = useRef(0);
   const focusIndexRef = useRef(0);
+  const resumeAfterOverlayRef = useRef(false);
+  const lastKeyRef = useRef({ name: '', at: 0 });
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -39,6 +91,15 @@ function SharePlayClient() {
   overlayOpenRef.current = overlayOpen;
   playingIndexRef.current = playingIndex;
   focusIndexRef.current = focusIndex;
+
+  useEffect(() => {
+    window.__suntvShareRemote = { overlayOpen };
+    return () => {
+      if (window.__suntvShareRemote) {
+        window.__suntvShareRemote.overlayOpen = false;
+      }
+    };
+  }, [overlayOpen]);
 
   useEffect(() => {
     if (!token) {
@@ -134,31 +195,49 @@ function SharePlayClient() {
   }, []);
 
   const openOverlay = useCallback(() => {
+    const video = videoRef.current;
+    resumeAfterOverlayRef.current = !!(
+      video &&
+      !video.paused &&
+      !video.ended
+    );
+    video?.pause();
     setFocusIndex(playingIndexRef.current);
     setOverlayOpen(true);
   }, []);
 
   const closeOverlay = useCallback(() => {
     setOverlayOpen(false);
+    if (resumeAfterOverlayRef.current) {
+      resumeAfterOverlayRef.current = false;
+      void videoRef.current?.play().catch(() => undefined);
+    }
   }, []);
 
-  const confirmEpisode = useCallback(
-    (index: number) => {
-      setPlayingIndex(index);
-      setFocusIndex(index);
-      setOverlayOpen(false);
-    },
-    []
-  );
+  const confirmEpisode = useCallback((index: number) => {
+    resumeAfterOverlayRef.current = false;
+    setPlayingIndex(index);
+    setFocusIndex(index);
+    setOverlayOpen(false);
+  }, []);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const episodes = detail?.episodes || [];
       if (!episodes.length) return;
 
-      const key = event.key;
+      const key = normalizeKey(event);
+      if (!key) return;
+
       const last = episodes.length - 1;
       const open = overlayOpenRef.current;
+      const now = Date.now();
+      const recent = lastKeyRef.current;
+      if (key === recent.name && now - recent.at < KEY_COOLDOWN_MS) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
 
       if (
         [
@@ -169,11 +248,11 @@ function SharePlayClient() {
           'Enter',
           ' ',
           'Escape',
-          'Backspace',
         ].includes(key)
       ) {
         event.preventDefault();
         event.stopPropagation();
+        lastKeyRef.current = { name: key, at: now };
       }
 
       if (!open) {
@@ -196,21 +275,17 @@ function SharePlayClient() {
         return;
       }
 
-      if (key === 'Escape' || key === 'Backspace' || key === 'ArrowDown') {
+      if (key === 'Escape' || key === 'ArrowDown') {
         closeOverlay();
         return;
       }
 
-      if (key === 'ArrowLeft') {
+      if (key === 'ArrowLeft' || key === 'ArrowUp') {
         setFocusIndex((current) => Math.max(0, current - 1));
         return;
       }
       if (key === 'ArrowRight') {
         setFocusIndex((current) => Math.min(last, current + 1));
-        return;
-      }
-      if (key === 'ArrowUp') {
-        setFocusIndex((current) => Math.max(0, current - 1));
         return;
       }
       if (key === 'Enter' || key === ' ') {
@@ -224,7 +299,7 @@ function SharePlayClient() {
 
   if (loading) {
     return (
-      <div className='min-h-screen bg-black text-white flex items-center justify-center text-xl'>
+      <div className='min-h-screen bg-black text-white flex items-center justify-center text-xl cursor-none'>
         正在打开播放页...
       </div>
     );
@@ -232,17 +307,17 @@ function SharePlayClient() {
 
   if (error || !detail) {
     return (
-      <div className='min-h-screen bg-black text-white flex items-center justify-center text-xl px-6 text-center'>
+      <div className='min-h-screen bg-black text-white flex items-center justify-center text-xl px-6 text-center cursor-none'>
         {error || '分享链接无效或已过期'}
       </div>
     );
   }
 
   return (
-    <div className='relative h-screen w-screen bg-black text-white overflow-hidden'>
+    <div className='relative h-screen w-screen bg-black text-white overflow-hidden cursor-none'>
       <video
         ref={videoRef}
-        className='w-full h-full object-contain bg-black'
+        className='w-full h-full object-contain bg-black cursor-none'
         autoPlay
         playsInline
         tabIndex={-1}
